@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual C++ Express 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Mouse_sim", "Mouse_sim.vcxproj", "{16A6030F-1B6F-404B-83DF-A17AA1A9E510}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{16A6030F-1B6F-404B-83DF-A17AA1A9E510}.Debug|Win32.ActiveCfg = Debug|Win32
+		{16A6030F-1B6F-404B-83DF-A17AA1A9E510}.Debug|Win32.Build.0 = Debug|Win32
+		{16A6030F-1B6F-404B-83DF-A17AA1A9E510}.Release|Win32.ActiveCfg = Release|Win32
+		{16A6030F-1B6F-404B-83DF-A17AA1A9E510}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
