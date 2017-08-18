@@ -313,20 +313,53 @@ public:
 	~node_step();
 };
 
-class adachi :public node_step{
+
+struct path_element {
+	uint8_t distance;
+	SLALOM_TYPE turn;
+	bool is_right;	//ターンが右か？
+
+};
+
+class node_path :virtual public node_step {
+private:
+	static std::vector<path_element> path;
+	static PATH to_PATH(path_element from);
+	bool is_right_turn(compas now, compas next);		//次のターンが右向きならtrue
+	static void put_straight(int half);	//何半区間進むか
+	static void put_small_turn(bool is_right);		//小回りでどちらに曲がるか
+
+public:
+	static void format();
+	static PATH get_path(uint16_t index);	//PATHを直接返す
+
+//protected:	//歩数をひいてから実行するのを前提としているので外部アクセス禁止にしておく
+	bool create_path(std::pair<uint8_t, uint8_t> finish, std::pair<uint8_t, uint8_t> init, compas mouse_direction);
+	//initマスの中心からfinishマスの中心までのPath　道がふさがってたらFasle
+	//mouse_direction が引数になっている理由
+	//基本的には最短走行か既知区間加速で使うので歩数の小さい方が今行くべき方向と一致しているが、最小歩数が複数あるとヤバいので最初の向きを要求している
+	bool create_path_naname(std::pair<uint8_t, uint8_t> finish, std::pair<uint8_t, uint8_t> init, compas mouse_direction);;		//斜め大回りパスを生成
+
+
+public:
+	node_path();
+	~node_path();
+
+};
+
+class adachi :virtual public node_step, virtual public  node_path {
 private:
 	bool set_step_double(uint8_t double_x, uint8_t double_y, uint16_t step_val);	//XY方向両方に倍取った座標軸での歩数代入関数
 	bool set_step_double(std::pair<uint8_t, uint8_t> xy, uint16_t step_val);		//XY方向両方に倍取った座標軸での歩数代入関数
 	uint16_t get_step_double(uint8_t double_x, uint8_t double_y);		//2倍座標系から歩数を取り出す
-
-	bool is_right_turn(compas now,compas next);		//次のターンが右向きならtrue
 
 public:
 	//TODO 重みづけを管理する構造体？か何かを作ってそれに従って歩数マップを作成するように変更する
 	void spread_step(int tar_x, int tar_y);		//足立法に従って歩数を敷き詰める	
 	void spread_step_based_distance(int tar_x, int tar_y);		//距離ベース（平松法）に従って歩数を敷き詰める	
 
-	bool create_path(std::pair<uint8_t, uint8_t> finish, std::pair<uint8_t, uint8_t> init,compas mouse_direction);		//initマスの中心からfinishマスの中心までのPath　道がふさがってたらFasle
+	bool create_path(std::pair<uint8_t, uint8_t> finish, std::pair<uint8_t, uint8_t> init,compas mouse_direction);		
+	//initマスの中心からfinishマスの中心までのPath　道がふさがってたらFasle
 	//mouse_direction が引数になっている理由
 	//基本的には最短走行か既知区間加速で使うので歩数の小さい方が今行くべき方向と一致しているが、最小歩数が複数あるとヤバいので最初の向きを要求している
 
@@ -336,29 +369,6 @@ public:
 
 };
 
-struct path_element {
-	uint8_t distance;
-	SLALOM_TYPE turn;
-	bool is_right;	//ターンが右か？
 
-};
-
-class node_path:public node_step {
-private:
-	static std::vector<path_element> path;
-	static PATH to_PATH(path_element from);
-	
-public: 
-	static void format();
-
-	static void put_straight(int half);	//何半区間進むか
-	static void put_small_turn(bool is_right);		//小回りでどちらに曲がるか
-
-	static PATH get_path(uint16_t index);	//PATHを直接返す
-
-	node_path();
-	~node_path();
-
-};
 
 #endif /* MAP_H_ */

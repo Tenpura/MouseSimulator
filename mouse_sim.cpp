@@ -238,7 +238,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine
 				now_map.set_step(goal_x, goal_y);
 				//now_map‚Æ“¯‚¶•Çî•ñ‚ğ‹¤—L
 				now_map.output_map_data(&temp_map);
-				now_node.input_map_data(&temp_map);
+				now_node.map::input_map_data(&temp_map);
 				now_node.spread_step_based_distance(goal_x, goal_y);
 			}
 

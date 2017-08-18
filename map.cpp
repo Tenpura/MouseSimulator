@@ -2338,39 +2338,6 @@ uint16_t adachi::get_step_double(uint8_t double_x, uint8_t double_y){
 	return node_step::get_step(x, y, muki);
 }
 
-bool adachi::is_right_turn(compas now, compas next) {
-	switch (now) {
-	case north:
-		if (next == east)
-			return true;
-		else
-			return false;
-		break;
-
-	case south:
-		if (next == west)
-			return true;
-		else
-			return false;
-		break;
-
-	case east:
-		if (next == south)
-			return true;
-		else
-			return false;
-		break;
-
-	case west:
-		if (next == north)
-			return true;
-		else
-			return false;
-		break;
-	}
-
-}
-
 void adachi::spread_step(int tar_x, int tar_y) {
 	//座標管理は歩数の配列(X方向だけ倍)と異なりX,Y方向両方で倍にする　隣接座標の取り扱いが楽だから
 
@@ -2378,7 +2345,7 @@ void adachi::spread_step(int tar_x, int tar_y) {
 	std::pair<uint8_t, uint8_t> temp;
 
 	//歩数をリセット
-	reset_step(init_step);
+	node_step::reset_step(init_step);
 	uint8_t tekitou_x;
 	//目標座標を最初にキューにぶち込む
 	for (int i = 0; i < 3; i++) {
@@ -2432,7 +2399,7 @@ void adachi::spread_step_based_distance(int tar_x, int tar_y) {
 	std::pair<uint8_t, uint8_t> temp;
 
 	//歩数をリセット
-	reset_step(init_step);
+	node_step::reset_step(init_step);
 	uint8_t tekitou_x;
 	//目標座標を最初にキューにぶち込む
 	for (int i = 0; i < 3; i++) {
@@ -2479,68 +2446,9 @@ void adachi::spread_step_based_distance(int tar_x, int tar_y) {
 
 bool adachi::create_path(std::pair<uint8_t, uint8_t> finish, std::pair<uint8_t, uint8_t> init, compas mouse_direction) {
 	//歩数マップ作製
-	reset_step(init_step);	
+	node_step::reset_step(init_step);
 	spread_step_based_distance(finish.first, finish.second);		//FIX_ME ここは既知壁だけで歩数マップ作製
-	
-	
-	//パスを初期化
-	node_path::format();
-	node_path::put_straight(1);			//区画中心にいる想定なので半区間前進
-	
-
-	//向かっている方向の歩数が初期値なら、道が閉じているので終了
-	uint16_t now_step = get_step(init.first, init.second, mouse_direction);
-	if (now_step >= init_step)
-		return false;
-	
-	//歩数の低い方へ下っていく
-	compas now_compas = mouse_direction;
-	uint8_t now_x = init.first;
-	uint8_t now_y = init.second;
-	uint16_t next_step = now_step;
-	compas next_compas = now_compas;
-	while (now_step != 0) {
-
-		//次の方角へマスを移動　※区画外に出るとかは、歩数マップ作成時にはじかれてるはずと信じている
-		switch (next_compas) {
-		case north:
-			now_y += 1;		//y座標を1増やす
-			break;
-		case south:
-			now_y -= 1;		//y座標を1減らす
-			break;
-		case east:
-			now_x += 1;		//x座標を1増やす
-			break;
-		case west:
-			now_x -= 1;		//x座標を1減らす
-			break;
-		}
-				
-		next_compas = get_min_compas(now_x, now_y);	//次に行く方角を決める
-		next_step = get_step(now_x, now_y, next_compas);	//次に行く場所の歩数も取得
-
-		if (now_step <= next_step)
-			return false;		//今の歩数が次行くべき歩数と同じかそれ以下ということはあり得ないはずなので、とりあえず失敗しとく
-		
-
-		
-		//パスを追加
-		if (now_compas == next_compas)
-			node_path::put_straight(2);	//今の向きと同じ方向に進むなら直進
-		else //ターン以外の選択肢はないはず　
-			node_path::put_small_turn(is_right_turn(now_compas, next_compas));
-		
-
-
-		now_step = next_step;	//歩数を更新
-		now_compas = next_compas;	//方角を更新
-
-	}
-	//Path終了
-	node_path::put_straight(1);
-
-	return true;
+	return node_path::create_path(finish, init, mouse_direction);		//歩数マップに従ってパス作製
 
 }
 
@@ -2549,7 +2457,7 @@ adachi::adachi() {
 
 
 adachi::adachi(uint16_t init_step) {
-	reset_step(init_step);
+	node_step::reset_step(init_step);
 }
 
 
@@ -2599,6 +2507,39 @@ PATH node_path::to_PATH(path_element from){
 
 }
 
+bool node_path::is_right_turn(compas now, compas next) {
+	switch (now) {
+	case north:
+		if (next == east)
+			return true;
+		else
+			return false;
+		break;
+
+	case south:
+		if (next == west)
+			return true;
+		else
+			return false;
+		break;
+
+	case east:
+		if (next == south)
+			return true;
+		else
+			return false;
+		break;
+
+	case west:
+		if (next == north)
+			return true;
+		else
+			return false;
+		break;
+	}
+
+}
+
 void node_path::format() {
 	std::vector<path_element>(1).swap(path);
 }
@@ -2618,6 +2559,68 @@ void node_path::put_small_turn(bool is_right) {
 
 }
 
+bool node_path::create_path(std::pair<uint8_t, uint8_t> finish, std::pair<uint8_t, uint8_t> init, compas mouse_direction) {
+	node_path::format();				//パスを初期化
+	node_path::put_straight(1);			//区画中心にいる想定なので半区間前進
+
+										//向かっている方向の歩数が初期値なら、道が閉じているので終了
+	uint16_t now_step = get_step(init.first, init.second, mouse_direction);
+	if (now_step >= init_step)
+		return false;
+
+	//歩数の低い方へ下っていく
+	compas now_compas = mouse_direction;
+	uint8_t now_x = init.first;
+	uint8_t now_y = init.second;
+	uint16_t next_step = now_step;
+	compas next_compas = now_compas;
+	while (now_step != 0) {
+
+		//次の方角へマスを移動　※区画外に出るとかは、歩数マップ作成時にはじかれてるはずと信じている
+		switch (next_compas) {
+		case north:
+			now_y += 1;		//y座標を1増やす
+			break;
+		case south:
+			now_y -= 1;		//y座標を1減らす
+			break;
+		case east:
+			now_x += 1;		//x座標を1増やす
+			break;
+		case west:
+			now_x -= 1;		//x座標を1減らす
+			break;
+		}
+
+		next_compas = get_min_compas(now_x, now_y);	//次に行く方角を決める
+		next_step = get_step(now_x, now_y, next_compas);	//次に行く場所の歩数も取得
+
+		if (now_step <= next_step)
+			return false;		//今の歩数が次行くべき歩数と同じかそれ以下ということはあり得ないはずなので、とりあえず失敗しとく
+
+
+
+								//パスを追加
+		if (now_compas == next_compas)
+			node_path::put_straight(2);	//今の向きと同じ方向に進むなら直進
+		else //ターン以外の選択肢はないはず　
+			node_path::put_small_turn(is_right_turn(now_compas, next_compas));
+
+
+
+		now_step = next_step;	//歩数を更新
+		now_compas = next_compas;	//方角を更新
+
+	}
+	//Path終了
+	node_path::put_straight(1);
+
+	return true;
+
+}
+
+
+
 PATH node_path::get_path(uint16_t index) {
 	if (path.size() <= index) {		//要素外アクセス禁止
 		PATH temp;
@@ -2633,6 +2636,8 @@ PATH node_path::get_path(uint16_t index) {
 	return ans;
 
 }
+
+
 
 
 node_path::node_path() {
