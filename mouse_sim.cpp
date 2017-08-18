@@ -1,9 +1,13 @@
+
+#include<stdint.h>
+#include<iostream>
+#include<fstream>
+
 #include "DxLib.h"
 #include "define.h"
 #include "map.h"
 
-#include<iostream>
-#include<fstream>
+
 
 using namespace std;
 
@@ -32,7 +36,7 @@ init_slalom slalom_turn_90_left		=		{	MUKI_LEFT,		500.0f,	90.0f,		20.0f,		5.0f,	
 
 init_slalom slalom_turn_90_right_shortest=	{	MUKI_RIGHT,		500.0f,	90.0f,		20.0f,		5.0f,		23.0f,		0.480,		0.265f};		//90°右回転スラローム
 init_slalom slalom_turn_90_left_shortest=	{	MUKI_LEFT,		500.0f,	90.0f,		20.0f,		5.0f,		23.0f,		0.480,		0.265f};		//90°左回転スラローム
-//tekitou 
+
 
 //大回り
 init_slalom slalom_big_turn_90_left[2]	=	{	{MUKI_LEFT,		700.0f,	90.0f,		30.0f,		13.000f,	80.000f,	0.1408,		0.160f},		//90°左回転大回りスラローム
@@ -96,11 +100,12 @@ int tool_button[4]={0};
 int color_bit;
 
 //描画関係
-void draw_all(adachi sim_map);
+void draw_all(step sim_map);
 void draw_mouse(unsigned char mouse_x,unsigned char mouse_y,unsigned char muki);
-void draw_step(adachi &sim_map);
+void draw_step(step &sim_map);
+void draw_step(node_step &node_step);
 void draw_path(path sim_path);
-
+void draw_path(node_path path);		//PATHを描画する。できなかったらfalse
 
 //迷路上の座標を指定すると、その座標の左上のピクセル(？)を返す
 int convert_draw_x(signed char maze_x);
@@ -116,7 +121,7 @@ void direction_turn_half(signed char *direction_x,signed char *direction_y, unsi
 
 
 //あるクラスから壁情報を継承する関数
-void get_square(adachi& orig, adachi& tar, unsigned char x, unsigned char y);
+void get_square(step& orig, step& tar, unsigned char x, unsigned char y);
 
 // プログラムは WinMain から始まります
 int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine, int nCmdShow )
@@ -161,16 +166,16 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine
 
 
 
-	adachi sim_map, now_map;	
+	step sim_map, now_map;	
+	adachi now_node(node_step::init_step);
 	path sim_path;
 	MAP_DATA input_data, now_map_data;
+	MAP_DATA temp_map;	//マップ共有用　
+	node_path nopt;
 
 	status sim_status;		//statusクラス
 
 	unsigned char h_data[16][16]={{14,4,6,5,13,12,4,5,13,12,4,5,12,4,6,5},{12,0,5,8,2,1,9,8,2,1,9,8,1,8,5,9},{9,9,8,1,13,9,8,2,4,1,8,3,11,11,8,1},{9,8,1,8,1,8,1,12,1,8,1,14,4,5,11,9},{8,1,9,9,8,1,8,1,8,3,11,12,1,8,5,9},{9,10,1,8,1,10,1,8,3,14,4,1,9,9,9,9},{8,4,3,9,10,5,10,3,14,4,3,11,11,9,9,9},{9,8,4,2,6,2,5,12,4,0,6,6,7,11,9,9},{8,1,8,4,6,6,3,8,3,10,6,6,6,5,9,9},{9,10,1,9,12,6,4,2,7,12,6,6,6,3,9,9},{9,13,8,1,9,12,1,12,6,2,4,4,4,6,0,3},{9,9,11,9,8,1,11,9,13,13,9,9,9,13,9,13},{9,9,12,3,9,10,5,8,0,0,0,0,0,0,1,9},{9,8,2,5,10,6,2,3,11,11,11,11,11,11,10,1},{8,2,7,10,6,4,6,4,6,6,4,6,4,6,5,9},{10,6,6,6,6,2,6,2,6,6,2,6,2,6,2,3}};
-
-	//平松最短{{14, 4, 6, 5,13,12, 4, 4, 7,12, 4, 5,12, 4, 6, 7},{12, 2, 5, 8, 2, 1, 9, 8, 6, 1, 9, 8, 1, 8, 5,13},{ 8, 5,10, 1,12, 1, 8, 2, 4, 1, 8, 3,11,11, 8, 1},{ 9,10, 5, 8, 1,10, 2, 5, 9, 8, 3,14, 4, 5,11, 9},{ 9,12, 2, 1, 8, 4, 6, 1, 8, 3,14, 4, 1, 8, 5, 9},{ 8, 2, 4, 2, 1, 8, 5, 8, 3,14, 4, 1, 9, 9, 9, 9},{ 8, 4, 2, 6, 0, 3,10, 3,14, 4, 3,11,11,11, 9, 9},{ 9, 8, 4, 6, 2, 6, 5,12, 4, 0, 6, 6, 6, 7, 9, 9},{ 8, 1, 9,12, 6, 6, 3, 8, 3,10, 6, 6, 6, 5, 9, 9},{ 9, 8, 1, 9,12, 6, 4, 2, 7,12, 6, 6, 6, 3, 9, 9},{ 8, 3,11, 9, 9,12, 3,14, 4, 2, 6, 6, 6, 6, 0, 1},{ 9,12, 7, 9, 9,10, 5,12, 3,13,13,13,13,12, 3,11},{ 9, 8, 6, 3,10, 5, 8, 0, 4, 0, 0, 0, 0, 0, 6, 5},{ 9, 8, 6, 4, 5,10, 3,11,11,11,11,11,11,11,12, 1},{ 8, 2, 6, 3,10, 4, 6, 4, 6, 6, 4, 6, 4, 6, 1, 9},{10, 6, 6, 6, 6, 2, 6, 2, 6, 6, 2, 6, 2, 6, 2, 3}};
-	//足立最短{{14,4,6,5,13,12,4,4,7,12,4,5,12,4,6,5},{12,2,5,8,2,1,9,8,6,1,9,8,1,8,5,9},{8,5,10,1,12,1,8,2,4,1,8,3,11,11,8,1},{9,10,5,8,1,10,2,5,9,8,1,14,4,5,11,9},{9,12,2,1,8,4,6,1,8,3,11,12,1,8,5,9},{8,2,4,2,1,8,5,8,3,14,4,1,9,9,9,9},{8,4,2,6,0,1,10,3,14,4,3,11,11,11,9,9},{9,8,4,6,2,2,5,12,4,0,6,6,6,7,9,9},{8,1,11,12,6,6,3,8,3,10,6,6,6,5,9,9},{9,8,5,9,13,14,4,2,7,12,6,6,6,3,9,9},{9,11,11,9,9,12,3,14,4,2,4,4,4,6,0,1},{9,12,7,9,8,3,12,4,3,13,9,9,9,12,3,9},{9,8,6,3,10,5,9,8,4,0,0,0,0,0,4,3},{9,8,6,4,5,10,2,3,11,11,11,11,11,11,10,5},{8,2,6,3,10,4,6,4,6,6,4,6,4,6,5,9},{10,6,6,6,6,2,6,2,6,6,2,6,2,6,2,3}};	
 
 	sim_map.convert_mapdata(h_data);
 
@@ -222,11 +227,25 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine
 
 			if(key[KEY_INPUT_X]==1){
 				now_map.set_step_by_known(goal_x,goal_y);
-				draw_path(sim_path);
-			}else now_map.set_step(goal_x,goal_y);
+				//draw_path(sim_path);
+				
+				if (now_node.create_path(std::pair<uint8_t, uint8_t>(goal_x, goal_y), std::pair<uint8_t, uint8_t>(0, 0), north)) {
+					draw_path(nopt);
+				}
+				
+			}
+			else {
+				now_map.set_step(goal_x, goal_y);
+				//now_mapと同じ壁情報を共有
+				now_map.output_map_data(&temp_map);
+				now_node.input_map_data(&temp_map);
+				now_node.spread_step_based_distance(goal_x, goal_y);
+			}
 
 			//		now_map.set_step(goal_x,goal_y);
-			draw_step(now_map);
+			//draw_step(now_map);
+			draw_step(now_node);
+
 
 			draw_mouse(sim_status.get_x_position(),sim_status.get_y_position(),sim_status.get_direction());
 			draw_all(now_map);	//今マウスが知っている迷路だけを表示
@@ -438,7 +457,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine
 }
 
 
-void draw_all(adachi sim_map){
+void draw_all(step sim_map){
 	static int icon_x,icon_y;		//マウスアイコンの座標
 
 	static int bar_scale_x = maze_area_width-40*2-toolbutton_width;	//横スクロールバーの長さ[ピクセル]	初期値はmaxサイズ(スクロールできない)
@@ -663,7 +682,7 @@ void draw_mouse(unsigned char mouse_x,unsigned char mouse_y,unsigned char muki){
 
 }
 
-void draw_step(adachi &sim_map){
+void draw_step(step &sim_map){
 
 	for(int i=0;i<MAZE_SIZE;i++){
 		for(int j=0;j<MAZE_SIZE;j++){
@@ -677,39 +696,67 @@ void draw_step(adachi &sim_map){
 
 }
 
-void draw_path(path sim_path){
-	unsigned char draw_distance=0;
-	unsigned char path_x=0,path_y=0;				//座標管理用
-	unsigned int draw_x=0,draw_y=0;				//描画管理用
-	signed char draw_direction_x,draw_direction_y;	//向き管理用
-	signed char temp_direction_x,temp_direction_y;	//向き管理用
-	signed char naname_flag = FALSE;		//ナナメスイッチ
+void draw_step(node_step &node_step) {
+	uint16_t temp_step;
+	int16_t x_pos;
+	int16_t y_pos;
+	int16_t fnt_pos;
 
-	//座標を初期化
-	path_x=0;
-	path_y=0;
+	for (int x = 0;x<MAZE_SIZE;x++) {
+		for (int y = 0;y<MAZE_SIZE;y++) {
+			//歩数が初期値の場所は描画しない			
+			temp_step = node_step.get_step(x, y, south);
+			if (temp_step < node_step::init_step) {
+				fnt_pos = GetDrawFormatStringWidth("%d", temp_step);
+				x_pos = (convert_draw_x(x) + convert_draw_x(x + 1)) / 2 - fnt_pos/2;
+				y_pos = convert_draw_y(y - 1) - magin;
+				DrawFormatString(x_pos, y_pos, black, "%d", temp_step);
+			}
+			temp_step = node_step.get_step(x, y, west);
+			if (temp_step < node_step::init_step) {
+				fnt_pos = GetDrawFormatStringWidth("%d", temp_step);
+				x_pos = convert_draw_x(x) -fnt_pos / 2;
+				y_pos = (convert_draw_y(y) + convert_draw_y(y - 1)) / 2 - magin;
+				DrawFormatString(x_pos, y_pos, black, "%d", temp_step);
+			}
+		}
+	}
+}
+
+void draw_path(path sim_path) {
+	unsigned char draw_distance = 0;
+	unsigned char path_x = 0, path_y = 0;				//座標管理用
+	unsigned int draw_x = 0, draw_y = 0;				//描画管理用
+	signed char draw_direction_x, draw_direction_y;	//向き管理用
+	signed char temp_direction_x, temp_direction_y;	//向き管理用
+	signed char naname_flag = FALSE;		//ナナメスイッチ
+	static const int thickness = 5;			//線の太さ
+
+											//座標を初期化
+	path_x = 0;
+	path_y = 0;
 
 	//向きを初期化
-	draw_direction_x=0;
-	draw_direction_y=1;
+	draw_direction_x = 0;
+	draw_direction_y = 1;
 
-	draw_x = convert_draw_x(path_x) + kukaku_size/2;//+ kukaku_size/2*draw_direction_x;
-	draw_y = convert_draw_y(path_y) + kukaku_size/2;//+ kukaku_size/2*draw_direction_y;
-
-
+	draw_x = convert_draw_x(path_x) + kukaku_size / 2;//+ kukaku_size/2*draw_direction_x;
+	draw_y = convert_draw_y(path_y) + kukaku_size / 2;//+ kukaku_size/2*draw_direction_y;
 
 
-	for(int i=0;;i++){
+
+
+	for (int i = 0;;i++) {
 		draw_distance = sim_path.get_path_straight(i);
-		DrawLine( draw_x, draw_y, draw_x+draw_distance*kukaku_size/2*draw_direction_x, draw_y+draw_distance*kukaku_size/2*(-draw_direction_y), blue, TRUE) ;
+		DrawLine(draw_x, draw_y, draw_x + draw_distance*kukaku_size / 2 * draw_direction_x, draw_y + draw_distance*kukaku_size / 2 * (-draw_direction_y), blue, thickness);
 
 		//更新
-		draw_x += draw_direction_x * draw_distance * kukaku_size/2;
-		draw_y += (-draw_direction_y) * draw_distance * kukaku_size/2;
+		draw_x += draw_direction_x * draw_distance * kukaku_size / 2;
+		draw_y += (-draw_direction_y) * draw_distance * kukaku_size / 2;
 
-		if(sim_path.get_path_flag(i) == TRUE)	break;
+		if (sim_path.get_path_flag(i) == TRUE)	break;
 
-		switch(sim_path.get_path_turn_type(i)){
+		switch (sim_path.get_path_turn_type(i)) {
 		case 0:
 			return;
 			break;
@@ -717,132 +764,134 @@ void draw_path(path sim_path){
 		case 1:			//小回り
 			temp_direction_x = draw_direction_x;
 			temp_direction_y = draw_direction_y;
-			direction_turn(&draw_direction_x,&draw_direction_y,sim_path.get_path_turn_muki(i));
-			DrawLine( draw_x, draw_y, draw_x + (temp_direction_x+draw_direction_x)*kukaku_size/2, draw_y - (temp_direction_y+draw_direction_y)*kukaku_size/2, blue, TRUE);
-			draw_x += (temp_direction_x+draw_direction_x)*kukaku_size/2;
-			draw_y -= (temp_direction_y+draw_direction_y)*kukaku_size/2;
+			direction_turn(&draw_direction_x, &draw_direction_y, sim_path.get_path_turn_muki(i));
+			DrawLine(draw_x, draw_y, draw_x + (temp_direction_x + draw_direction_x)*kukaku_size / 2, draw_y - (temp_direction_y + draw_direction_y)*kukaku_size / 2, blue, thickness);
+			draw_x += (temp_direction_x + draw_direction_x)*kukaku_size / 2;
+			draw_y -= (temp_direction_y + draw_direction_y)*kukaku_size / 2;
 			break;
 
 		case 2:			//大回り
-			//半区画直進
-			DrawLine( draw_x, draw_y, draw_x+kukaku_size/2*draw_direction_x, draw_y+kukaku_size/2*(-draw_direction_y), red, TRUE) ;
-			draw_x += draw_direction_x * kukaku_size/2;
-			draw_y += (-draw_direction_y) * kukaku_size/2;
+						//半区画直進
+			DrawLine(draw_x, draw_y, draw_x + kukaku_size / 2 * draw_direction_x, draw_y + kukaku_size / 2 * (-draw_direction_y), red, thickness);
+			draw_x += draw_direction_x * kukaku_size / 2;
+			draw_y += (-draw_direction_y) * kukaku_size / 2;
 			//ターン
 			temp_direction_x = draw_direction_x;
 			temp_direction_y = draw_direction_y;
-			direction_turn(&draw_direction_x,&draw_direction_y,sim_path.get_path_turn_muki(i));
-			DrawLine( draw_x, draw_y, draw_x + (temp_direction_x+draw_direction_x)*kukaku_size/2, draw_y - (temp_direction_y+draw_direction_y)*kukaku_size/2, red, TRUE);
-			draw_x += (temp_direction_x+draw_direction_x)*kukaku_size/2;
-			draw_y -= (temp_direction_y+draw_direction_y)*kukaku_size/2;
+			direction_turn(&draw_direction_x, &draw_direction_y, sim_path.get_path_turn_muki(i));
+			DrawLine(draw_x, draw_y, draw_x + (temp_direction_x + draw_direction_x)*kukaku_size / 2, draw_y - (temp_direction_y + draw_direction_y)*kukaku_size / 2, red, thickness);
+			draw_x += (temp_direction_x + draw_direction_x)*kukaku_size / 2;
+			draw_y -= (temp_direction_y + draw_direction_y)*kukaku_size / 2;
 			//半区画直進
-			DrawLine( draw_x, draw_y, draw_x+kukaku_size/2*draw_direction_x, draw_y+kukaku_size/2*(-draw_direction_y), red, TRUE) ;
-			draw_x += draw_direction_x * kukaku_size/2;
-			draw_y += (-draw_direction_y) * kukaku_size/2;
+			DrawLine(draw_x, draw_y, draw_x + kukaku_size / 2 * draw_direction_x, draw_y + kukaku_size / 2 * (-draw_direction_y), red, thickness);
+			draw_x += draw_direction_x * kukaku_size / 2;
+			draw_y += (-draw_direction_y) * kukaku_size / 2;
 			break;
 
 		case 3:			//Uターン
-			//半区画直進
-			DrawLine( draw_x, draw_y, draw_x+kukaku_size/2*draw_direction_x, draw_y+kukaku_size/2*(-draw_direction_y), red, TRUE) ;
-			draw_x += draw_direction_x * kukaku_size/2;
-			draw_y += (-draw_direction_y) * kukaku_size/2;
+						//半区画直進
+			DrawLine(draw_x, draw_y, draw_x + kukaku_size / 2 * draw_direction_x, draw_y + kukaku_size / 2 * (-draw_direction_y), red, thickness);
+			draw_x += draw_direction_x * kukaku_size / 2;
+			draw_y += (-draw_direction_y) * kukaku_size / 2;
 			//ターン
 			temp_direction_x = draw_direction_x;
 			temp_direction_y = draw_direction_y;
-			direction_turn(&draw_direction_x,&draw_direction_y,sim_path.get_path_turn_muki(i));
-			DrawLine( draw_x, draw_y, draw_x + (temp_direction_x+draw_direction_x)*kukaku_size/2, draw_y - (temp_direction_y+draw_direction_y)*kukaku_size/2, red, TRUE);
-			draw_x += (temp_direction_x+draw_direction_x)*kukaku_size/2;
-			draw_y -= (temp_direction_y+draw_direction_y)*kukaku_size/2;
+			direction_turn(&draw_direction_x, &draw_direction_y, sim_path.get_path_turn_muki(i));
+			DrawLine(draw_x, draw_y, draw_x + (temp_direction_x + draw_direction_x)*kukaku_size / 2, draw_y - (temp_direction_y + draw_direction_y)*kukaku_size / 2, red, thickness);
+			draw_x += (temp_direction_x + draw_direction_x)*kukaku_size / 2;
+			draw_y -= (temp_direction_y + draw_direction_y)*kukaku_size / 2;
 			//ターン
 			temp_direction_x = draw_direction_x;
 			temp_direction_y = draw_direction_y;
-			direction_turn(&draw_direction_x,&draw_direction_y,sim_path.get_path_turn_muki(i));
-			DrawLine( draw_x, draw_y, draw_x + (temp_direction_x+draw_direction_x)*kukaku_size/2, draw_y - (temp_direction_y+draw_direction_y)*kukaku_size/2, red, TRUE);
-			draw_x += (temp_direction_x+draw_direction_x)*kukaku_size/2;
-			draw_y -= (temp_direction_y+draw_direction_y)*kukaku_size/2;
+			direction_turn(&draw_direction_x, &draw_direction_y, sim_path.get_path_turn_muki(i));
+			DrawLine(draw_x, draw_y, draw_x + (temp_direction_x + draw_direction_x)*kukaku_size / 2, draw_y - (temp_direction_y + draw_direction_y)*kukaku_size / 2, red, thickness);
+			draw_x += (temp_direction_x + draw_direction_x)*kukaku_size / 2;
+			draw_y -= (temp_direction_y + draw_direction_y)*kukaku_size / 2;
 			//半区画直進
-			DrawLine( draw_x, draw_y, draw_x+kukaku_size/2*draw_direction_x, draw_y+kukaku_size/2*(-draw_direction_y), red, TRUE) ;
-			draw_x += draw_direction_x * kukaku_size/2;
-			draw_y += (-draw_direction_y) * kukaku_size/2;
+			DrawLine(draw_x, draw_y, draw_x + kukaku_size / 2 * draw_direction_x, draw_y + kukaku_size / 2 * (-draw_direction_y), red, thickness);
+			draw_x += draw_direction_x * kukaku_size / 2;
+			draw_y += (-draw_direction_y) * kukaku_size / 2;
 			break;
 
 		case 4:			//45°ターン
-			if( naname_flag == TRUE){
+			if (naname_flag == TRUE) {
 				naname_flag = FALSE;
 				//45°ターン
-				DrawLine( draw_x, draw_y, draw_x + (draw_direction_x)*kukaku_size/2, draw_y - (draw_direction_y)*kukaku_size/2, green, TRUE);
-				draw_x += (draw_direction_x)*kukaku_size/2;
-				draw_y -= (draw_direction_y)*kukaku_size/2;
-				direction_turn_half(&draw_direction_x,&draw_direction_y,sim_path.get_path_turn_muki(i));
+				DrawLine(draw_x, draw_y, draw_x + (draw_direction_x)*kukaku_size / 2, draw_y - (draw_direction_y)*kukaku_size / 2, green, thickness);
+				draw_x += (draw_direction_x)*kukaku_size / 2;
+				draw_y -= (draw_direction_y)*kukaku_size / 2;
+				direction_turn_half(&draw_direction_x, &draw_direction_y, sim_path.get_path_turn_muki(i));
 				//半区画直進
-				DrawLine( draw_x, draw_y, draw_x+kukaku_size/2*draw_direction_x, draw_y+kukaku_size/2*(-draw_direction_y), green, TRUE) ;
-				draw_x += draw_direction_x * kukaku_size/2;
-				draw_y += (-draw_direction_y) * kukaku_size/2;
-			}else{
+				DrawLine(draw_x, draw_y, draw_x + kukaku_size / 2 * draw_direction_x, draw_y + kukaku_size / 2 * (-draw_direction_y), green, thickness);
+				draw_x += draw_direction_x * kukaku_size / 2;
+				draw_y += (-draw_direction_y) * kukaku_size / 2;
+			}
+			else {
 				naname_flag = TRUE;
 				//半区画直進
-				DrawLine( draw_x, draw_y, draw_x+kukaku_size/2*draw_direction_x, draw_y+kukaku_size/2*(-draw_direction_y), green, TRUE) ;
-				draw_x += draw_direction_x * kukaku_size/2;
-				draw_y += (-draw_direction_y) * kukaku_size/2;
+				DrawLine(draw_x, draw_y, draw_x + kukaku_size / 2 * draw_direction_x, draw_y + kukaku_size / 2 * (-draw_direction_y), green, thickness);
+				draw_x += draw_direction_x * kukaku_size / 2;
+				draw_y += (-draw_direction_y) * kukaku_size / 2;
 				//45°ターン
-				direction_turn_half(&draw_direction_x,&draw_direction_y,sim_path.get_path_turn_muki(i));
-				DrawLine( draw_x, draw_y, draw_x + (draw_direction_x)*kukaku_size/2, draw_y - (draw_direction_y)*kukaku_size/2, green, TRUE);
-				draw_x += (draw_direction_x)*kukaku_size/2;
-				draw_y -= (draw_direction_y)*kukaku_size/2;
+				direction_turn_half(&draw_direction_x, &draw_direction_y, sim_path.get_path_turn_muki(i));
+				DrawLine(draw_x, draw_y, draw_x + (draw_direction_x)*kukaku_size / 2, draw_y - (draw_direction_y)*kukaku_size / 2, green, thickness);
+				draw_x += (draw_direction_x)*kukaku_size / 2;
+				draw_y -= (draw_direction_y)*kukaku_size / 2;
 			}
 			break;
 
 		case 5:			//135°ターン
-			if( naname_flag == TRUE){
+			if (naname_flag == TRUE) {
 				naname_flag = FALSE;
 				//45°ターン
-				DrawLine( draw_x, draw_y, draw_x + (draw_direction_x)*kukaku_size/2, draw_y - (draw_direction_y)*kukaku_size/2, green, TRUE);
-				draw_x += (draw_direction_x)*kukaku_size/2;
-				draw_y -= (draw_direction_y)*kukaku_size/2;
-				direction_turn_half(&draw_direction_x,&draw_direction_y,sim_path.get_path_turn_muki(i));
+				DrawLine(draw_x, draw_y, draw_x + (draw_direction_x)*kukaku_size / 2, draw_y - (draw_direction_y)*kukaku_size / 2, green, thickness);
+				draw_x += (draw_direction_x)*kukaku_size / 2;
+				draw_y -= (draw_direction_y)*kukaku_size / 2;
+				direction_turn_half(&draw_direction_x, &draw_direction_y, sim_path.get_path_turn_muki(i));
 				//90°ターン
 				temp_direction_x = draw_direction_x;
 				temp_direction_y = draw_direction_y;
-				direction_turn(&draw_direction_x,&draw_direction_y,sim_path.get_path_turn_muki(i));
-				DrawLine( draw_x, draw_y, draw_x + (temp_direction_x+draw_direction_x)*kukaku_size/2, draw_y - (temp_direction_y+draw_direction_y)*kukaku_size/2, green, TRUE);
-				draw_x += (temp_direction_x+draw_direction_x)*kukaku_size/2;
-				draw_y -= (temp_direction_y+draw_direction_y)*kukaku_size/2;
+				direction_turn(&draw_direction_x, &draw_direction_y, sim_path.get_path_turn_muki(i));
+				DrawLine(draw_x, draw_y, draw_x + (temp_direction_x + draw_direction_x)*kukaku_size / 2, draw_y - (temp_direction_y + draw_direction_y)*kukaku_size / 2, green, thickness);
+				draw_x += (temp_direction_x + draw_direction_x)*kukaku_size / 2;
+				draw_y -= (temp_direction_y + draw_direction_y)*kukaku_size / 2;
 				//半区画直進
-				DrawLine( draw_x, draw_y, draw_x+kukaku_size/2*draw_direction_x, draw_y+kukaku_size/2*(-draw_direction_y), green, TRUE) ;
-				draw_x += draw_direction_x * kukaku_size/2;
-				draw_y += (-draw_direction_y) * kukaku_size/2;
-			}else{
+				DrawLine(draw_x, draw_y, draw_x + kukaku_size / 2 * draw_direction_x, draw_y + kukaku_size / 2 * (-draw_direction_y), green, thickness);
+				draw_x += draw_direction_x * kukaku_size / 2;
+				draw_y += (-draw_direction_y) * kukaku_size / 2;
+			}
+			else {
 				naname_flag = TRUE;
 				//半区画直進
-				DrawLine( draw_x, draw_y, draw_x+kukaku_size/2*draw_direction_x, draw_y+kukaku_size/2*(-draw_direction_y), green, TRUE) ;
-				draw_x += draw_direction_x * kukaku_size/2;
-				draw_y += (-draw_direction_y) * kukaku_size/2;
+				DrawLine(draw_x, draw_y, draw_x + kukaku_size / 2 * draw_direction_x, draw_y + kukaku_size / 2 * (-draw_direction_y), green, thickness);
+				draw_x += draw_direction_x * kukaku_size / 2;
+				draw_y += (-draw_direction_y) * kukaku_size / 2;
 				//90°ターン
 				temp_direction_x = draw_direction_x;
 				temp_direction_y = draw_direction_y;
-				direction_turn(&draw_direction_x,&draw_direction_y,sim_path.get_path_turn_muki(i));
-				DrawLine( draw_x, draw_y, draw_x + (temp_direction_x+draw_direction_x)*kukaku_size/2, draw_y - (temp_direction_y+draw_direction_y)*kukaku_size/2, green, TRUE);
-				draw_x += (temp_direction_x+draw_direction_x)*kukaku_size/2;
-				draw_y -= (temp_direction_y+draw_direction_y)*kukaku_size/2;
+				direction_turn(&draw_direction_x, &draw_direction_y, sim_path.get_path_turn_muki(i));
+				DrawLine(draw_x, draw_y, draw_x + (temp_direction_x + draw_direction_x)*kukaku_size / 2, draw_y - (temp_direction_y + draw_direction_y)*kukaku_size / 2, green, thickness);
+				draw_x += (temp_direction_x + draw_direction_x)*kukaku_size / 2;
+				draw_y -= (temp_direction_y + draw_direction_y)*kukaku_size / 2;
 				//45°ターン
-				direction_turn_half(&draw_direction_x,&draw_direction_y,sim_path.get_path_turn_muki(i));
-				DrawLine( draw_x, draw_y, draw_x + (draw_direction_x)*kukaku_size/2, draw_y - (draw_direction_y)*kukaku_size/2, green, TRUE);
-				draw_x += (draw_direction_x)*kukaku_size/2;
-				draw_y -= (draw_direction_y)*kukaku_size/2;
+				direction_turn_half(&draw_direction_x, &draw_direction_y, sim_path.get_path_turn_muki(i));
+				DrawLine(draw_x, draw_y, draw_x + (draw_direction_x)*kukaku_size / 2, draw_y - (draw_direction_y)*kukaku_size / 2, green, thickness);
+				draw_x += (draw_direction_x)*kukaku_size / 2;
+				draw_y -= (draw_direction_y)*kukaku_size / 2;
 			}
 			break;
 
 		case 6:			//ナナメ90°ターン
-			//半区画直進
-			DrawLine( draw_x, draw_y, draw_x+kukaku_size/2*draw_direction_x, draw_y+kukaku_size/2*(-draw_direction_y), green, TRUE) ;
-			draw_x += draw_direction_x * kukaku_size/2;
-			draw_y += (-draw_direction_y) * kukaku_size/2;
+						//半区画直進
+			DrawLine(draw_x, draw_y, draw_x + kukaku_size / 2 * draw_direction_x, draw_y + kukaku_size / 2 * (-draw_direction_y), green, thickness);
+			draw_x += draw_direction_x * kukaku_size / 2;
+			draw_y += (-draw_direction_y) * kukaku_size / 2;
 			//方向転換
-			direction_turn(&draw_direction_x,&draw_direction_y,sim_path.get_path_turn_muki(i));
+			direction_turn(&draw_direction_x, &draw_direction_y, sim_path.get_path_turn_muki(i));
 			//半区画直進
-			DrawLine( draw_x, draw_y, draw_x+kukaku_size/2*draw_direction_x, draw_y+kukaku_size/2*(-draw_direction_y), green, TRUE) ;
-			draw_x += draw_direction_x * kukaku_size/2;
-			draw_y += (-draw_direction_y) * kukaku_size/2;
+			DrawLine(draw_x, draw_y, draw_x + kukaku_size / 2 * draw_direction_x, draw_y + kukaku_size / 2 * (-draw_direction_y), green, thickness);
+			draw_x += draw_direction_x * kukaku_size / 2;
+			draw_y += (-draw_direction_y) * kukaku_size / 2;
 			break;
 
 		}
@@ -850,6 +899,186 @@ void draw_path(path sim_path){
 	}
 
 }
+
+void draw_path(node_path path) {
+	unsigned char draw_distance = 0;
+	unsigned char path_x = 0, path_y = 0;				//座標管理用
+	unsigned int draw_x = 0, draw_y = 0;				//描画管理用
+	signed char draw_direction_x, draw_direction_y;	//向き管理用
+	signed char temp_direction_x, temp_direction_y;	//向き管理用
+	signed char naname_flag = FALSE;		//ナナメスイッチ
+	static const int thickness = 5;			//線の太さ
+	uint8_t muki;
+
+											//座標を初期化
+	path_x = 0;
+	path_y = 0;
+
+	//向きを初期化
+	draw_direction_x = 0;
+	draw_direction_y = 1;
+
+	draw_x = convert_draw_x(path_x) + kukaku_size / 2;//+ kukaku_size/2*draw_direction_x;
+	draw_y = convert_draw_y(path_y) + kukaku_size / 2;//+ kukaku_size/2*draw_direction_y;
+
+
+
+
+	for (int i = 0;;i++) {
+		draw_distance = path.get_path(i).element.distance;
+		DrawLine(draw_x, draw_y, draw_x + draw_distance*kukaku_size / 2 * draw_direction_x, draw_y + draw_distance*kukaku_size / 2 * (-draw_direction_y), blue, thickness);
+
+		//更新
+		draw_x += draw_direction_x * draw_distance * kukaku_size / 2;
+		draw_y += (-draw_direction_y) * draw_distance * kukaku_size / 2;
+
+		if (path.get_path(i).element.flag == TRUE)	break;
+
+		muki = path.get_path(i).element.muki;
+		switch (path.get_path(i).element.turn) {
+		case 0:
+			return;
+			break;
+
+		case 1:			//小回り
+			temp_direction_x = draw_direction_x;
+			temp_direction_y = draw_direction_y;
+			direction_turn(&draw_direction_x, &draw_direction_y, muki);
+			DrawLine(draw_x, draw_y, draw_x + (temp_direction_x + draw_direction_x)*kukaku_size / 2, draw_y - (temp_direction_y + draw_direction_y)*kukaku_size / 2, blue, thickness);
+			draw_x += (temp_direction_x + draw_direction_x)*kukaku_size / 2;
+			draw_y -= (temp_direction_y + draw_direction_y)*kukaku_size / 2;
+			break;
+
+		case 2:			//大回り
+						//半区画直進
+			DrawLine(draw_x, draw_y, draw_x + kukaku_size / 2 * draw_direction_x, draw_y + kukaku_size / 2 * (-draw_direction_y), red, thickness);
+			draw_x += draw_direction_x * kukaku_size / 2;
+			draw_y += (-draw_direction_y) * kukaku_size / 2;
+			//ターン
+			temp_direction_x = draw_direction_x;
+			temp_direction_y = draw_direction_y;
+			direction_turn(&draw_direction_x, &draw_direction_y, muki);
+			DrawLine(draw_x, draw_y, draw_x + (temp_direction_x + draw_direction_x)*kukaku_size / 2, draw_y - (temp_direction_y + draw_direction_y)*kukaku_size / 2, red, thickness);
+			draw_x += (temp_direction_x + draw_direction_x)*kukaku_size / 2;
+			draw_y -= (temp_direction_y + draw_direction_y)*kukaku_size / 2;
+			//半区画直進
+			DrawLine(draw_x, draw_y, draw_x + kukaku_size / 2 * draw_direction_x, draw_y + kukaku_size / 2 * (-draw_direction_y), red, thickness);
+			draw_x += draw_direction_x * kukaku_size / 2;
+			draw_y += (-draw_direction_y) * kukaku_size / 2;
+			break;
+
+		case 3:			//Uターン
+						//半区画直進
+			DrawLine(draw_x, draw_y, draw_x + kukaku_size / 2 * draw_direction_x, draw_y + kukaku_size / 2 * (-draw_direction_y), red, thickness);
+			draw_x += draw_direction_x * kukaku_size / 2;
+			draw_y += (-draw_direction_y) * kukaku_size / 2;
+			//ターン
+			temp_direction_x = draw_direction_x;
+			temp_direction_y = draw_direction_y;
+			direction_turn(&draw_direction_x, &draw_direction_y, muki);
+			DrawLine(draw_x, draw_y, draw_x + (temp_direction_x + draw_direction_x)*kukaku_size / 2, draw_y - (temp_direction_y + draw_direction_y)*kukaku_size / 2, red, thickness);
+			draw_x += (temp_direction_x + draw_direction_x)*kukaku_size / 2;
+			draw_y -= (temp_direction_y + draw_direction_y)*kukaku_size / 2;
+			//ターン
+			temp_direction_x = draw_direction_x;
+			temp_direction_y = draw_direction_y;
+			direction_turn(&draw_direction_x, &draw_direction_y, muki);
+			DrawLine(draw_x, draw_y, draw_x + (temp_direction_x + draw_direction_x)*kukaku_size / 2, draw_y - (temp_direction_y + draw_direction_y)*kukaku_size / 2, red, thickness);
+			draw_x += (temp_direction_x + draw_direction_x)*kukaku_size / 2;
+			draw_y -= (temp_direction_y + draw_direction_y)*kukaku_size / 2;
+			//半区画直進
+			DrawLine(draw_x, draw_y, draw_x + kukaku_size / 2 * draw_direction_x, draw_y + kukaku_size / 2 * (-draw_direction_y), red, thickness);
+			draw_x += draw_direction_x * kukaku_size / 2;
+			draw_y += (-draw_direction_y) * kukaku_size / 2;
+			break;
+
+		case 4:			//45°ターン
+			if (naname_flag == TRUE) {
+				naname_flag = FALSE;
+				//45°ターン
+				DrawLine(draw_x, draw_y, draw_x + (draw_direction_x)*kukaku_size / 2, draw_y - (draw_direction_y)*kukaku_size / 2, green, thickness);
+				draw_x += (draw_direction_x)*kukaku_size / 2;
+				draw_y -= (draw_direction_y)*kukaku_size / 2;
+				direction_turn_half(&draw_direction_x, &draw_direction_y, muki);
+				//半区画直進
+				DrawLine(draw_x, draw_y, draw_x + kukaku_size / 2 * draw_direction_x, draw_y + kukaku_size / 2 * (-draw_direction_y), green, thickness);
+				draw_x += draw_direction_x * kukaku_size / 2;
+				draw_y += (-draw_direction_y) * kukaku_size / 2;
+			}
+			else {
+				naname_flag = TRUE;
+				//半区画直進
+				DrawLine(draw_x, draw_y, draw_x + kukaku_size / 2 * draw_direction_x, draw_y + kukaku_size / 2 * (-draw_direction_y), green, thickness);
+				draw_x += draw_direction_x * kukaku_size / 2;
+				draw_y += (-draw_direction_y) * kukaku_size / 2;
+				//45°ターン
+				direction_turn_half(&draw_direction_x, &draw_direction_y, muki);
+				DrawLine(draw_x, draw_y, draw_x + (draw_direction_x)*kukaku_size / 2, draw_y - (draw_direction_y)*kukaku_size / 2, green, thickness);
+				draw_x += (draw_direction_x)*kukaku_size / 2;
+				draw_y -= (draw_direction_y)*kukaku_size / 2;
+			}
+			break;
+
+		case 5:			//135°ターン
+			if (naname_flag == TRUE) {
+				naname_flag = FALSE;
+				//45°ターン
+				DrawLine(draw_x, draw_y, draw_x + (draw_direction_x)*kukaku_size / 2, draw_y - (draw_direction_y)*kukaku_size / 2, green, thickness);
+				draw_x += (draw_direction_x)*kukaku_size / 2;
+				draw_y -= (draw_direction_y)*kukaku_size / 2;
+				direction_turn_half(&draw_direction_x, &draw_direction_y, muki);
+				//90°ターン
+				temp_direction_x = draw_direction_x;
+				temp_direction_y = draw_direction_y;
+				direction_turn(&draw_direction_x, &draw_direction_y, muki);
+				DrawLine(draw_x, draw_y, draw_x + (temp_direction_x + draw_direction_x)*kukaku_size / 2, draw_y - (temp_direction_y + draw_direction_y)*kukaku_size / 2, green, thickness);
+				draw_x += (temp_direction_x + draw_direction_x)*kukaku_size / 2;
+				draw_y -= (temp_direction_y + draw_direction_y)*kukaku_size / 2;
+				//半区画直進
+				DrawLine(draw_x, draw_y, draw_x + kukaku_size / 2 * draw_direction_x, draw_y + kukaku_size / 2 * (-draw_direction_y), green, thickness);
+				draw_x += draw_direction_x * kukaku_size / 2;
+				draw_y += (-draw_direction_y) * kukaku_size / 2;
+			}
+			else {
+				naname_flag = TRUE;
+				//半区画直進
+				DrawLine(draw_x, draw_y, draw_x + kukaku_size / 2 * draw_direction_x, draw_y + kukaku_size / 2 * (-draw_direction_y), green, thickness);
+				draw_x += draw_direction_x * kukaku_size / 2;
+				draw_y += (-draw_direction_y) * kukaku_size / 2;
+				//90°ターン
+				temp_direction_x = draw_direction_x;
+				temp_direction_y = draw_direction_y;
+				direction_turn(&draw_direction_x, &draw_direction_y, muki);
+				DrawLine(draw_x, draw_y, draw_x + (temp_direction_x + draw_direction_x)*kukaku_size / 2, draw_y - (temp_direction_y + draw_direction_y)*kukaku_size / 2, green, thickness);
+				draw_x += (temp_direction_x + draw_direction_x)*kukaku_size / 2;
+				draw_y -= (temp_direction_y + draw_direction_y)*kukaku_size / 2;
+				//45°ターン
+				direction_turn_half(&draw_direction_x, &draw_direction_y, muki);
+				DrawLine(draw_x, draw_y, draw_x + (draw_direction_x)*kukaku_size / 2, draw_y - (draw_direction_y)*kukaku_size / 2, green, thickness);
+				draw_x += (draw_direction_x)*kukaku_size / 2;
+				draw_y -= (draw_direction_y)*kukaku_size / 2;
+			}
+			break;
+
+		case 6:			//ナナメ90°ターン
+						//半区画直進
+			DrawLine(draw_x, draw_y, draw_x + kukaku_size / 2 * draw_direction_x, draw_y + kukaku_size / 2 * (-draw_direction_y), green, thickness);
+			draw_x += draw_direction_x * kukaku_size / 2;
+			draw_y += (-draw_direction_y) * kukaku_size / 2;
+			//方向転換
+			direction_turn(&draw_direction_x, &draw_direction_y, muki);
+			//半区画直進
+			DrawLine(draw_x, draw_y, draw_x + kukaku_size / 2 * draw_direction_x, draw_y + kukaku_size / 2 * (-draw_direction_y), green, thickness);
+			draw_x += draw_direction_x * kukaku_size / 2;
+			draw_y += (-draw_direction_y) * kukaku_size / 2;
+			break;
+
+		}
+
+	}
+
+}
+
 
 int convert_draw_x(signed char maze_x){
 	int draw_x = magin+kukaku_size*maze_x -look_xy[0]*scroll_scale_x;
@@ -888,7 +1117,7 @@ void direction_turn_half(signed char *direction_x,signed char *direction_y, unsi
 }	
 
 
-void get_square(adachi& orig, adachi& tar, unsigned char x, unsigned char y){
+void get_square(step& orig, step& tar, unsigned char x, unsigned char y){
 	for(int i=0;i<4;i++){	//MUKIのDefineが０～３までなのでこうしてる
 		if(orig.get_wall(x,y,i)==TRUE){
 			tar.create_wall(x,y,i);

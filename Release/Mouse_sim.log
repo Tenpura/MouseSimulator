@@ -1,0 +1,24 @@
+﻿  map.cpp
+map.cpp : warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+c:\users\太嘉志\desktop\mice\マウスシュミレーター\myself\mousesimulator\map.h : warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+c:\users\太嘉志\desktop\mice\マウスシュミレーター\myself\mousesimulator\iodefine.h(84): warning C4068: 不明なプラグマがありました。
+c:\users\太嘉志\desktop\mice\マウスシュミレーター\myself\mousesimulator\iodefine.h(85): warning C4068: 不明なプラグマがありました。
+c:\users\太嘉志\desktop\mice\マウスシュミレーター\myself\mousesimulator\iodefine.h(5142): warning C4068: 不明なプラグマがありました。
+c:\users\太嘉志\desktop\mice\マウスシュミレーター\myself\mousesimulator\iodefine.h(5143): warning C4068: 不明なプラグマがありました。
+c:\users\太嘉志\desktop\mice\マウスシュミレーター\myself\mousesimulator\define.h : warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+map.cpp(979): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+map.cpp(1525): warning C4244: '=': 'float' から 'unsigned short' への変換です。データが失われる可能性があります。
+map.cpp(1526): warning C4244: '+=': 'float' から 'unsigned short' への変換です。データが失われる可能性があります。
+map.cpp(1535): warning C4244: '=': 'float' から 'unsigned short' への変換です。データが失われる可能性があります。
+map.cpp(1536): warning C4244: '+=': 'float' から 'unsigned short' への変換です。データが失われる可能性があります。
+map.cpp(1620): warning C4244: '引数': 'double' から 'float' への変換です。データが失われる可能性があります。
+map.cpp(1620): warning C4244: '引数': 'double' から 'int' への変換です。データが失われる可能性があります。
+map.cpp(1753): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+map.cpp(2594): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+  コード生成しています。
+  2 of 782 functions ( 0.3%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    1 functions had inline decision re-evaluated but remain unchanged
+  コード生成が終了しました。
+  Mouse_sim.vcxproj -> C:\Users\太嘉志\Desktop\Mice\マウスシュミレーター\Myself\MouseSimulator\Release\Mouse_sim.exe
+  Mouse_sim.vcxproj -> C:\Users\太嘉志\Desktop\Mice\マウスシュミレーター\Myself\MouseSimulator\Release\Mouse_sim.pdb (Full PDB)

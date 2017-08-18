@@ -633,15 +633,107 @@ map::~map(){
 }
 
 
-void adachi::step_reset(){
+void step::set_step_adachi(MAZE_GOAL *target) {
+	unsigned char x_count = 0, y_count = 0;	//一時的に座標をもっとくよう
+
+
+	step_reset();
+	
+	while (1) {
+		
+	}
+	//simple_step[target_x][target_y] = 0;
+
+	//coordinate  [tail][][][] -> [][][head]
+
+	head = 1;
+	tail = 0;
+
+	//Qの最初には目標の座標を入れとく
+	//x_coordinate[tail] = target_x;
+	//y_coordinate[tail] = target_y;
+
+	while (head != tail) {
+		//座標を代入
+		x_count = x_coordinate[tail];
+		y_count = y_coordinate[tail];
+
+		tail++;
+
+		//左マス
+		if ((x_count - 1) >= 0) {		//座標が迷路内(x-1が0以上)にあり
+			if ((simple_step[x_count - 1][y_count] == STEP_INIT)) {		//歩数を入れてない（入ってる歩数がSTEP_INIT）
+				if (get_wall(x_count, y_count, MUKI_LEFT) == FALSE) {		//元のマスの左壁がないなら
+					simple_step[x_count - 1][y_count] = simple_step[x_count][y_count] + 1;		//歩数を代入
+																								//この座標を保持
+					x_coordinate[head] = (x_count - 1);
+					y_coordinate[head] = y_count;
+					head++;
+				}
+			}
+		}
+
+		//右マス
+		if ((x_count + 1) < MAZE_SIZE) {	//座標が迷路内(x+1がMAZE_SIZE未満)にあり
+			if ((simple_step[x_count + 1][y_count] == STEP_INIT)) {	//歩数を入れてない（入ってる歩数がSTEP_INIT）
+				if (get_wall(x_count, y_count, MUKI_RIGHT) == FALSE) {		//元のマスの右壁がない
+					simple_step[x_count + 1][y_count] = simple_step[x_count][y_count] + 1;	//歩数を代入
+																							//この座標を保持
+					x_coordinate[head] = (x_count + 1);
+					y_coordinate[head] = y_count;
+					head++;
+				}
+			}
+		}
+
+		//下マス
+		if ((y_count - 1) >= 0) {		//座標が迷路内(y-1が0以上)にあり
+			if ((simple_step[x_count][y_count - 1] == STEP_INIT)) {		//歩数を入れてない（入ってる歩数がSTEP_INIT）
+				if (get_wall(x_count, y_count, MUKI_DOWN) == FALSE) {		//元のマスの下壁がない
+					simple_step[x_count][y_count - 1] = simple_step[x_count][y_count] + 1;	//歩数を代入
+																							//この座標を保持
+					x_coordinate[head] = x_count;
+					y_coordinate[head] = (y_count - 1);
+					head++;
+				}
+			}
+		}
+
+		//上マス
+		if ((y_count + 1) < MAZE_SIZE) {	//x,y+1の座標が迷路内(MAZE_SIZE未満)である
+			if ((simple_step[x_count][y_count + 1] == STEP_INIT)) {	//歩数を入れてない（入ってる歩数がSTEP_INIT）
+				if (get_wall(x_count, y_count, MUKI_UP) == FALSE) {		//元のマスの上壁がない
+					simple_step[x_count][y_count + 1] = simple_step[x_count][y_count] + 1;	//歩数を代入
+																							//この座標を保持
+					x_coordinate[head] = x_count;
+					y_coordinate[head] = (y_count + 1);
+					head++;
+				}
+			}
+		}
+
+
+		if (head>965) {		//配列越えたらエラー
+			myprintf("エラー!\n\radachi::set_step()内\n\r");
+			break;
+		}
+
+	}
+
+
+}
+
+
+
+void step::step_reset(){
 	for(char i=0;i<MAZE_SIZE;i++){
 		for(char j=0;j<MAZE_SIZE;j++){
-			step[i][j]=STEP_INIT;
+			simple_step[i][j]=STEP_INIT;
 		}
 	}
 }
 
-void adachi::step_reset_all_search(){
+void step::step_reset_all_search(){
 	bool known_flag=false;	//未知区間か既知区間かチェック用
 	for(char i=0;i<MAZE_SIZE;i++){
 		for(char j=0;j<MAZE_SIZE;j++){
@@ -652,10 +744,10 @@ void adachi::step_reset_all_search(){
 			}else if( check_exist(i,j,MUKI_RIGHT) == FALSE){	//右を見てないなら			
 			}else{		//全方向を見てる
 				known_flag=true;
-				step[i][j]=STEP_INIT;
+				simple_step[i][j]=STEP_INIT;
 			}
 			if(known_flag==false){
-				step[i][j]=0;
+				simple_step[i][j]=0;
 				x_coordinate[head] = i;
 				y_coordinate[head] = j;
 				head++;
@@ -664,12 +756,12 @@ void adachi::step_reset_all_search(){
 	}
 }
 
-void adachi::set_step(unsigned char target_x,unsigned char target_y){
+void step::set_step(unsigned char target_x,unsigned char target_y){
 	unsigned char x_count=0,y_count=0;	//一時的に座標をもっとくよう
 	
 
 	step_reset();
-	step[target_x][target_y]=0;
+	simple_step[target_x][target_y]=0;
 
 	//coordinate  [tail][][][] -> [][][head]
 	
@@ -689,9 +781,9 @@ void adachi::set_step(unsigned char target_x,unsigned char target_y){
 					
 			//左マス
 			if( (x_count-1) >= 0 ){		//座標が迷路内(x-1が0以上)にあり
-				if( (step[x_count-1][y_count] == STEP_INIT) ){		//歩数を入れてない（入ってる歩数がSTEP_INIT）
+				if( (simple_step[x_count-1][y_count] == STEP_INIT) ){		//歩数を入れてない（入ってる歩数がSTEP_INIT）
 					if( get_wall(x_count,y_count,MUKI_LEFT)==FALSE ){		//元のマスの左壁がないなら
-						step[x_count-1][y_count] = step[x_count][y_count]+1;		//歩数を代入
+						simple_step[x_count-1][y_count] = simple_step[x_count][y_count]+1;		//歩数を代入
 						//この座標を保持
 						x_coordinate[head] = (x_count - 1);
 						y_coordinate[head] = y_count;
@@ -702,9 +794,9 @@ void adachi::set_step(unsigned char target_x,unsigned char target_y){
 						
 			//右マス
 			if( (x_count+1) < MAZE_SIZE ){	//座標が迷路内(x+1がMAZE_SIZE未満)にあり
-				if( (step[x_count+1][y_count] == STEP_INIT) ){	//歩数を入れてない（入ってる歩数がSTEP_INIT）
+				if( (simple_step[x_count+1][y_count] == STEP_INIT) ){	//歩数を入れてない（入ってる歩数がSTEP_INIT）
 					if( get_wall(x_count,y_count,MUKI_RIGHT)==FALSE ){		//元のマスの右壁がない
-						step[x_count+1][y_count] = step[x_count][y_count]+1;	//歩数を代入
+						simple_step[x_count+1][y_count] = simple_step[x_count][y_count]+1;	//歩数を代入
 						//この座標を保持
 						x_coordinate[head] = (x_count + 1);
 						y_coordinate[head] = y_count;
@@ -715,9 +807,9 @@ void adachi::set_step(unsigned char target_x,unsigned char target_y){
 						
 			//下マス
 			if( (y_count-1) >= 0 ){		//座標が迷路内(y-1が0以上)にあり
-				if( (step[x_count][y_count-1] == STEP_INIT) ){		//歩数を入れてない（入ってる歩数がSTEP_INIT）
+				if( (simple_step[x_count][y_count-1] == STEP_INIT) ){		//歩数を入れてない（入ってる歩数がSTEP_INIT）
 					if( get_wall(x_count,y_count,MUKI_DOWN)==FALSE ){		//元のマスの下壁がない
-						step[x_count][y_count-1] = step[x_count][y_count]+1;	//歩数を代入
+						simple_step[x_count][y_count-1] = simple_step[x_count][y_count]+1;	//歩数を代入
 						//この座標を保持
 						x_coordinate[head] = x_count;
 						y_coordinate[head] = (y_count - 1);
@@ -728,9 +820,9 @@ void adachi::set_step(unsigned char target_x,unsigned char target_y){
 						
 			//上マス
 			if( (y_count+1) < MAZE_SIZE ){	//x,y+1の座標が迷路内(MAZE_SIZE未満)である
-				if( (step[x_count][y_count+1] == STEP_INIT) ){	//歩数を入れてない（入ってる歩数がSTEP_INIT）
+				if( (simple_step[x_count][y_count+1] == STEP_INIT) ){	//歩数を入れてない（入ってる歩数がSTEP_INIT）
 					if( get_wall(x_count,y_count,MUKI_UP)==FALSE ){		//元のマスの上壁がない
-						step[x_count][y_count+1] = step[x_count][y_count]+1;	//歩数を代入
+						simple_step[x_count][y_count+1] = simple_step[x_count][y_count]+1;	//歩数を代入
 						//この座標を保持
 						x_coordinate[head] = x_count;
 						y_coordinate[head] = (y_count + 1);
@@ -750,12 +842,12 @@ void adachi::set_step(unsigned char target_x,unsigned char target_y){
 
 }
 
-void adachi::set_step_by_known(unsigned char target_x,unsigned char target_y){
+void step::set_step_by_known(unsigned char target_x,unsigned char target_y){
 	unsigned char x_count=0,y_count=0;	//一時的に座標をもっとくよう
 
 
 	step_reset();
-	step[target_x][target_y]=0;
+	simple_step[target_x][target_y]=0;
 
 	//coordinate  [tail][][][] -> [][][head]
 	
@@ -775,10 +867,10 @@ void adachi::set_step_by_known(unsigned char target_x,unsigned char target_y){
 					
 			//左マス
 			if( (x_count-1) >= 0 ){		//座標が迷路内(x-1が0以上)にあり
-				if( (step[x_count-1][y_count] == STEP_INIT) ){		//歩数を入れてない（入ってる歩数がSTEP_INIT）
+				if( (simple_step[x_count-1][y_count] == STEP_INIT) ){		//歩数を入れてない（入ってる歩数がSTEP_INIT）
 					if( get_wall(x_count,y_count,MUKI_LEFT)==FALSE ){		//元のマスの左壁がないなら
 						if( check_exist(x_count,y_count,MUKI_LEFT)==TRUE ){		//左壁を見ているなら
-							step[x_count-1][y_count] = step[x_count][y_count]+1;		//歩数を代入
+							simple_step[x_count-1][y_count] = simple_step[x_count][y_count]+1;		//歩数を代入
 							//この座標を保持
 							x_coordinate[head] = (x_count - 1);
 							y_coordinate[head] = y_count;
@@ -790,10 +882,10 @@ void adachi::set_step_by_known(unsigned char target_x,unsigned char target_y){
 						
 			//右マス
 			if( (x_count+1) < MAZE_SIZE ){	//座標が迷路内(x+1がMAZE_SIZE未満)にあり
-				if( (step[x_count+1][y_count] == STEP_INIT) ){	//歩数を入れてない（入ってる歩数がSTEP_INIT）
+				if( (simple_step[x_count+1][y_count] == STEP_INIT) ){	//歩数を入れてない（入ってる歩数がSTEP_INIT）
 					if( get_wall(x_count,y_count,MUKI_RIGHT)==FALSE ){		//元のマスの右壁がない
 						if( check_exist(x_count,y_count,MUKI_RIGHT)==TRUE ){	//右壁を見ているなら
-							step[x_count+1][y_count] = step[x_count][y_count]+1;	//歩数を代入
+							simple_step[x_count+1][y_count] = simple_step[x_count][y_count]+1;	//歩数を代入
 							//この座標を保持
 							x_coordinate[head] = (x_count + 1);
 							y_coordinate[head] = y_count;
@@ -805,10 +897,10 @@ void adachi::set_step_by_known(unsigned char target_x,unsigned char target_y){
 						
 			//下マス
 			if( (y_count-1) >= 0 ){		//座標が迷路内(y-1が0以上)にあり
-				if( (step[x_count][y_count-1] == STEP_INIT) ){		//歩数を入れてない（入ってる歩数がSTEP_INIT）
+				if( (simple_step[x_count][y_count-1] == STEP_INIT) ){		//歩数を入れてない（入ってる歩数がSTEP_INIT）
 					if( get_wall(x_count,y_count,MUKI_DOWN)==FALSE ){		//元のマスの下壁がない
 						if( check_exist(x_count,y_count,MUKI_DOWN)==TRUE ){		//下壁が既知なら
-							step[x_count][y_count-1] = step[x_count][y_count]+1;	//歩数を代入
+							simple_step[x_count][y_count-1] = simple_step[x_count][y_count]+1;	//歩数を代入
 							//この座標を保持
 							x_coordinate[head] = x_count;
 							y_coordinate[head] = (y_count - 1);
@@ -820,10 +912,10 @@ void adachi::set_step_by_known(unsigned char target_x,unsigned char target_y){
 						
 			//上マス
 			if( (y_count+1) < MAZE_SIZE ){	//x,y+1の座標が迷路内(MAZE_SIZE未満)である
-				if( (step[x_count][y_count+1] == STEP_INIT) ){	//歩数を入れてない（入ってる歩数がSTEP_INIT）
+				if( (simple_step[x_count][y_count+1] == STEP_INIT) ){	//歩数を入れてない（入ってる歩数がSTEP_INIT）
 					if( get_wall(x_count,y_count,MUKI_UP)==FALSE ){		//元のマスの上壁がない
 						if( check_exist(x_count,y_count,MUKI_UP)==TRUE ){		//上壁が既知なら
-							step[x_count][y_count+1] = step[x_count][y_count]+1;	//歩数を代入
+							simple_step[x_count][y_count+1] = simple_step[x_count][y_count]+1;	//歩数を代入
 							//この座標を保持
 							x_coordinate[head] = x_count;
 							y_coordinate[head] = (y_count + 1);
@@ -843,7 +935,7 @@ void adachi::set_step_by_known(unsigned char target_x,unsigned char target_y){
 
 }
 
-void adachi::set_step_all_search(unsigned char target_x,unsigned char target_y){
+void step::set_step_all_search(unsigned char target_x,unsigned char target_y){
 	unsigned char x_count=0,y_count=0;	//一時的に座標をもっとくよう
 	
 	head = 0;
@@ -855,7 +947,7 @@ void adachi::set_step_all_search(unsigned char target_x,unsigned char target_y){
 		//Qには目標の座標を入れとく
 		x_coordinate[head] = target_x;
 		y_coordinate[head] = target_y;
-		step[target_x][target_y] = 0;
+		simple_step[target_x][target_y] = 0;
 		head++;
 	}
 
@@ -871,9 +963,9 @@ void adachi::set_step_all_search(unsigned char target_x,unsigned char target_y){
 					
 			//左マス
 			if( (x_count-1) >= 0 ){		//座標が迷路内(x-1が0以上)にあり
-				if( (step[x_count-1][y_count] == STEP_INIT) ){		//歩数を入れてない（入ってる歩数がSTEP_INIT）
+				if( (simple_step[x_count-1][y_count] == STEP_INIT) ){		//歩数を入れてない（入ってる歩数がSTEP_INIT）
 					if( get_wall(x_count,y_count,MUKI_LEFT)==FALSE ){		//元のマスの左壁がないなら
-						step[x_count-1][y_count] = step[x_count][y_count]+1;		//歩数を代入
+						simple_step[x_count-1][y_count] = simple_step[x_count][y_count]+1;		//歩数を代入
 						//この座標を保持
 						x_coordinate[head] = (x_count - 1);
 						y_coordinate[head] = y_count;
@@ -884,9 +976,9 @@ void adachi::set_step_all_search(unsigned char target_x,unsigned char target_y){
 						
 			//右マス
 			if( (x_count+1) < MAZE_SIZE ){	//座標が迷路内(x+1がMAZE_SIZE未満)にあり
-				if( (step[x_count+1][y_count] == STEP_INIT) ){	//歩数を入れてない（入ってる歩数がSTEP_INIT）
+				if( (simple_step[x_count+1][y_count] == STEP_INIT) ){	//歩数を入れてない（入ってる歩数がSTEP_INIT）
 					if( get_wall(x_count,y_count,MUKI_RIGHT)==FALSE ){		//元のマスの右壁がない
-						step[x_count+1][y_count] = step[x_count][y_count]+1;	//歩数を代入
+						simple_step[x_count+1][y_count] = simple_step[x_count][y_count]+1;	//歩数を代入
 						//この座標を保持
 						x_coordinate[head] = (x_count + 1);
 						y_coordinate[head] = y_count;
@@ -897,9 +989,9 @@ void adachi::set_step_all_search(unsigned char target_x,unsigned char target_y){
 						
 			//下マス
 			if( (y_count-1) >= 0 ){		//座標が迷路内(y-1が0以上)にあり
-				if( (step[x_count][y_count-1] == STEP_INIT) ){		//歩数を入れてない（入ってる歩数がSTEP_INIT）
+				if( (simple_step[x_count][y_count-1] == STEP_INIT) ){		//歩数を入れてない（入ってる歩数がSTEP_INIT）
 					if( get_wall(x_count,y_count,MUKI_DOWN)==FALSE ){		//元のマスの下壁がない
-						step[x_count][y_count-1] = step[x_count][y_count]+1;	//歩数を代入
+						simple_step[x_count][y_count-1] = simple_step[x_count][y_count]+1;	//歩数を代入
 						//この座標を保持
 						x_coordinate[head] = x_count;
 						y_coordinate[head] = (y_count - 1);
@@ -910,9 +1002,9 @@ void adachi::set_step_all_search(unsigned char target_x,unsigned char target_y){
 						
 			//上マス
 			if( (y_count+1) < MAZE_SIZE ){	//x,y+1の座標が迷路内(MAZE_SIZE未満)である
-				if( (step[x_count][y_count+1] == STEP_INIT) ){	//歩数を入れてない（入ってる歩数がSTEP_INIT）
+				if( (simple_step[x_count][y_count+1] == STEP_INIT) ){	//歩数を入れてない（入ってる歩数がSTEP_INIT）
 					if( get_wall(x_count,y_count,MUKI_UP)==FALSE ){		//元のマスの上壁がない
-						step[x_count][y_count+1] = step[x_count][y_count]+1;	//歩数を代入
+						simple_step[x_count][y_count+1] = simple_step[x_count][y_count]+1;	//歩数を代入
 						//この座標を保持
 						x_coordinate[head] = x_count;
 						y_coordinate[head] = (y_count + 1);
@@ -931,12 +1023,12 @@ void adachi::set_step_all_search(unsigned char target_x,unsigned char target_y){
 
 }
 
-unsigned int adachi::get_step(unsigned char target_x,unsigned char target_y){
-	return step[target_x][target_y];
+unsigned int step::get_step(unsigned char target_x,unsigned char target_y){
+	return simple_step[target_x][target_y];
 }
 
 
-void adachi::close_one_dead_end(unsigned char target_x, unsigned char target_y){
+void step::close_one_dead_end(unsigned char target_x, unsigned char target_y){
 	union {
 		unsigned char all;				//一括
 		struct {
@@ -955,7 +1047,7 @@ void adachi::close_one_dead_end(unsigned char target_x, unsigned char target_y){
 		dead_end.direction.left = 1;	//左フラグを建てる
 		dead_end.direction.count++;		//1足す	
 	}else if( (target_x-1) >= 0 ){		//座標が迷路内(x-1が0以上)にあり
-		if( (step[target_x-1][target_y] == STEP_INIT) || (check_exist(target_x,target_y,MUKI_LEFT) == FALSE) ){		//左のマスに行けない（入ってる歩数が255 または ）
+		if( (simple_step[target_x-1][target_y] == STEP_INIT) || (check_exist(target_x,target_y,MUKI_LEFT) == FALSE) ){		//左のマスに行けない（入ってる歩数が255 または ）
 			dead_end.direction.left = 1;	//左フラグオン
 			dead_end.direction.count++;		//1足す	
 		}	
@@ -966,7 +1058,7 @@ void adachi::close_one_dead_end(unsigned char target_x, unsigned char target_y){
 		dead_end.direction.right = 1;		//右フラグを建てる
 		dead_end.direction.count++;			//1足す	
 	}else if( (target_x+1) < MAZE_SIZE ){	//座標が迷路内(x+1がMax_x未満)にあり
-		if( (step[target_x+1][target_y] == STEP_INIT) || (check_exist(target_x,target_y,MUKI_RIGHT) == FALSE)){			//右のマスに行けない（入ってる歩数が255 または 壁がある）
+		if( (simple_step[target_x+1][target_y] == STEP_INIT) || (check_exist(target_x,target_y,MUKI_RIGHT) == FALSE)){			//右のマスに行けない（入ってる歩数が255 または 壁がある）
 			dead_end.direction.right = 1;	//右フラグを建てる
 			dead_end.direction.count++;		//1足す	
 		}
@@ -977,7 +1069,7 @@ void adachi::close_one_dead_end(unsigned char target_x, unsigned char target_y){
 		dead_end.direction.down = 1;		//下フラグを建てる
 		dead_end.direction.count++;			//1足す	
 	}else if( (target_y-1 >= 0) ){		//座標が迷路内(y-1が0以上)にあり
-		if( (step[target_x][target_y-1] == STEP_INIT) || (check_exist(target_x,target_y,MUKI_DOWN) == FALSE) ){		//下のマスに行けない（入ってる歩数が255 または 壁がある）
+		if( (simple_step[target_x][target_y-1] == STEP_INIT) || (check_exist(target_x,target_y,MUKI_DOWN) == FALSE) ){		//下のマスに行けない（入ってる歩数が255 または 壁がある）
 			dead_end.direction.down = 1;	//下フラグを建てる
 			dead_end.direction.count++;		//1足す	
 		}
@@ -988,7 +1080,7 @@ void adachi::close_one_dead_end(unsigned char target_x, unsigned char target_y){
 		dead_end.direction.up = 1;			//上フラグを建てる
 		dead_end.direction.count++;			//1足す	
 	}else if( (target_y+1 < MAZE_SIZE) ){	//x,y+1の座標が迷路内(MAX_y未満)である
-		if( (step[target_x][target_y+1] == STEP_INIT) || (check_exist(target_x,target_y,MUKI_UP) == FALSE) ){		//上のマスに行けない（入ってる歩数が255　または　壁がある）
+		if( (simple_step[target_x][target_y+1] == STEP_INIT) || (check_exist(target_x,target_y,MUKI_UP) == FALSE) ){		//上のマスに行けない（入ってる歩数が255　または　壁がある）
 			dead_end.direction.up = 1;		//上フラグを建てる
 			dead_end.direction.count++;		//1足す	
 		}
@@ -1000,7 +1092,7 @@ void adachi::close_one_dead_end(unsigned char target_x, unsigned char target_y){
 		if( (target_x == 0) && (target_y == 0) ){		//それがスタートなら何もしない
 		}else if( (target_x == GOAL_x) && (target_y == GOAL_y) ){		//それがゴールでも何もしない
 		}else{							//上記以外なら袋小路を潰す
-			step[target_x][target_y] = STEP_INIT;	//歩数を初期化
+			simple_step[target_x][target_y] = STEP_INIT;	//歩数を初期化
 			//袋小路のあいてる方向についてもう一回同じことを行う
 			if( dead_end.direction.left == 0 ){
 				create_wall(target_x,target_y,MUKI_LEFT);
@@ -1027,7 +1119,7 @@ void adachi::close_one_dead_end(unsigned char target_x, unsigned char target_y){
 	}
 }
 
-void adachi::close_dead_end(){
+void step::close_dead_end(){
 	for(int i=0;i<MAZE_SIZE;i++){
 		for(int j=0;j<MAZE_SIZE;j++){
 			close_one_dead_end(i,j);
@@ -1035,7 +1127,7 @@ void adachi::close_dead_end(){
 	}
 }
 
-adachi::adachi(){
+step::step(){
 	create_wall(0,0,MUKI_RIGHT);
 	create_wall(0,0,MUKI_LEFT);
 	create_wall(0,0,MUKI_DOWN);
@@ -1049,7 +1141,7 @@ adachi::adachi(){
 
 }
 
-adachi::~adachi(){
+step::~step(){
 
 }
 
@@ -2061,4 +2153,492 @@ status::status(unsigned char set_x, unsigned char set_y, unsigned char muki){
 }
 
 status::~status(){
+}
+
+uint16_t node_step::step[x_size][y_size];
+
+bool node_step::able_set_step(uint8_t x, uint8_t y, compas muki, uint16_t step_val) {
+	uint8_t def_muki = compas_to_define(muki);
+	/*
+	//見ていない部分には書き込めない
+	if (map::check_exist(x, y, def_muki) != TRUE) 
+		return false;
+	*/
+	
+	//壁がある部分には書き込めない
+	if (map::get_wall(x, y, def_muki) == TRUE)
+		return false;
+
+	//書き込む歩数より小さい場所には書き込めない
+	if (get_step(x, y, muki) <= step_val)
+		return false;
+
+	return true;
+}
+
+bool node_step::is_outside_array(uint8_t x_index, uint8_t y_index) {
+	if (x_index >= x_size)
+		return true;
+	if (x_index < 0)
+		return true;
+	if (y_index >= y_size)
+		return true;
+	if (y_index < 0)
+		return true;
+
+	return false;
+}
+
+bool node_step::set_step(uint8_t x, uint8_t y, compas muki, uint16_t step_val){
+	//代入用の変数
+	uint8_t step_x=x;
+	uint8_t step_y=y;
+	
+	switch (muki) {
+	//南向きと西向きに変更してやりなおし
+	case north:
+		return set_step(x, y + 1, south, step_val);
+		break;
+	case east:
+		return set_step(x+1, y, west, step_val);
+		break;
+
+	//南と西なら配列用にX座標を対応させる
+	case south:
+		step_x = 2 * x + 1;			//南向きだと横向きの壁なので、x方向が2x+1
+		break;
+	case west:
+		step_x = 2*x;				//西向きだと縦向きの壁なので、x方向は2x
+		break;
+	}
+
+	//配列の要素外に書き込むなら何もしない
+	if (is_outside_array(step_x,step_y))
+		return false;
+	
+	//書き込めるなら
+	if (able_set_step(x,y,muki,step_val)) {
+		step[step_x][step_y] = step_val;	//配列に歩数代入
+		return true;
+	}
+
+	return false;
+}
+	
+uint16_t node_step::get_step(uint8_t x, uint8_t y, compas muki) {
+	//代入用の変数
+	uint8_t step_x = x;
+	uint8_t step_y = y;
+
+	switch (muki) {
+		//南向きと西向きに変更してやりなおして終了
+	case north:
+		return get_step(x, y + 1, south);
+		break;
+	case east:
+		return get_step(x + 1, y, west);
+		break;
+
+		//南と西なら配列用にX座標を対応させる
+	case south:
+		step_x = 2 * x + 1;			//南向きだと横向きの壁なので、x方向が2x+1
+		break;
+	case west:
+		step_x = 2 * x;				//西向きだと縦向きの壁なので、x方向は2x
+		break;
+	}
+
+	//配列の要素外を読みだすときはInit_stepを
+	if (is_outside_array(step_x, step_y))
+		return init_step;
+	
+	return step[step_x][step_y];	//配列から歩数参照
+}
+
+compas node_step::get_min_compas(uint8_t x, uint8_t y) {
+	compas ans;
+
+	if (get_step(x, y, north) < get_step(x, y, south))
+		ans = north;
+	else
+		ans = south;
+	if (get_step(x, y, east) < get_step(x, y, ans))
+		ans = east;
+	if (get_step(x, y, west) < get_step(x, y, ans))
+		ans = west;
+
+	return ans;
+}
+
+void node_step::reset_step(uint16_t reset_val) {
+	for (int x=0; x < x_size; x++) {
+		for (int y = 0; y < y_size; y++)
+		{
+			step[x][y] = reset_val;
+		}
+	}
+
+}
+
+uint8_t node_step::compas_to_define(compas muki) {
+	switch (muki) {
+	case east:
+		return MUKI_RIGHT;
+	case west:
+		return MUKI_LEFT;
+	case north:
+		return MUKI_UP;
+	case south:
+		return MUKI_DOWN;
+	}
+}
+
+
+node_step::node_step() {
+	reset_step(init_step);		
+}
+
+node_step::node_step(uint16_t reset_val) {
+	reset_step(reset_val);
+}
+
+node_step::~node_step() {
+
+}
+
+
+bool adachi::set_step_double(uint8_t double_x, uint8_t double_y, uint16_t step_val) {
+	//2倍座標を通常の座標と向きに直す
+	uint8_t x = double_x / 2;
+	uint8_t y = double_y / 2;
+	compas muki;
+	if (double_x % 2 == 0) 		//縦壁なら
+		muki = west;
+	else if (double_y % 2 == 0) 	//横壁なら
+		muki = south;
+
+	return node_step::set_step(x, y, muki, step_val);
+	
+}
+
+bool adachi::set_step_double(std::pair<uint8_t, uint8_t> xy, uint16_t step_val) {
+	return set_step_double(xy.first, xy.second, step_val);
+}
+
+uint16_t adachi::get_step_double(uint8_t double_x, uint8_t double_y){
+	//2倍座標を通常の座標と向きに直す
+	uint8_t x = double_x / 2;
+	uint8_t y = double_y / 2;
+	compas muki;
+	if (double_x % 2 == 0) 		//縦壁なら
+		muki = west;
+	else if (double_y % 2 == 0) 	//横壁なら
+		muki = south;
+
+	return node_step::get_step(x, y, muki);
+}
+
+bool adachi::is_right_turn(compas now, compas next) {
+	switch (now) {
+	case north:
+		if (next == east)
+			return true;
+		else
+			return false;
+		break;
+
+	case south:
+		if (next == west)
+			return true;
+		else
+			return false;
+		break;
+
+	case east:
+		if (next == south)
+			return true;
+		else
+			return false;
+		break;
+
+	case west:
+		if (next == north)
+			return true;
+		else
+			return false;
+		break;
+	}
+
+}
+
+void adachi::spread_step(int tar_x, int tar_y) {
+	//座標管理は歩数の配列(X方向だけ倍)と異なりX,Y方向両方で倍にする　隣接座標の取り扱いが楽だから
+
+	std::queue< std::pair<uint8_t, uint8_t> > que;		//座標管理用Queue　FirstがX、SecondがY
+	std::pair<uint8_t, uint8_t> temp;
+
+	//歩数をリセット
+	reset_step(init_step);
+	uint8_t tekitou_x;
+	//目標座標を最初にキューにぶち込む
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 3; j++) {
+			if ((i + j) % 2 != 0) {			//2倍座標系では区画の間は奇数にしかありえない
+				temp = std::make_pair<uint8_t, uint8_t>(2 * tar_x + i, 2 * tar_y + j);
+				tekitou_x = temp.first;
+				if (set_step_double(temp, 0))
+					que.push(temp);
+			}
+		}
+	}
+	
+
+	uint16_t step = 0;	//現在の歩数
+	uint8_t x, y;	//2倍座標
+	while (!que.empty()) {
+		//キューから座標を取り出す
+		temp = que.front();
+		x = temp.first;
+		y = temp.second;
+		step = get_step_double(x, y);
+		que.pop();	//取り出したので削除
+
+		//隣接座標に歩を進める
+		//斜め方向
+		for (int dx = -1; dx <=1;dx++) {		
+			for (int dy = -1; dy <= 1;dy++) {	
+				if ((dx + dy) % 2 == 0) {			//区画の間はXY合計が奇数なので、変化幅はXY軸合計して偶数でないとダメ
+					if (set_step_double(x + dx, y + dy, step + 1))				//歩数を書き込めたら、書き込んだ座標をQueueにぶっこむ
+						que.push(std::make_pair<uint8_t, uint8_t>(x + dx, y + dy));
+				}
+			}
+		}
+		//直進方向　Xが2の倍数（縦壁）のときはX方向にだけ±2がある　Yでも同様　 ※XY両方が偶数になることはないはず
+		if (set_step_double(x + 2 * (1 - x%2), y + 2 * (1 - y%2), step + 1))				//歩数を書き込めたら、書き込んだ座標をQueueにぶっこむ
+			que.push(std::make_pair<uint8_t, uint8_t>(x + 2 * (1 - x % 2), y + 2 * (1 - y % 2)));
+		if (set_step_double(x - 2 * (1 - x % 2), y - 2 * (1 - y % 2), step + 1))				//歩数を書き込めたら、書き込んだ座標をQueueにぶっこむ
+			que.push(std::make_pair<uint8_t, uint8_t>(x - 2 * (1 - x % 2), y - 2 * (1 - y % 2)));
+
+
+	}
+
+
+}
+
+void adachi::spread_step_based_distance(int tar_x, int tar_y) {
+	//座標管理は歩数の配列(X方向だけ倍)と異なりX,Y方向両方で倍にする　隣接座標の取り扱いが楽だから
+
+	std::queue< std::pair<uint8_t, uint8_t> > que;		//座標管理用Queue　FirstがX、SecondがY
+	std::pair<uint8_t, uint8_t> temp;
+
+	//歩数をリセット
+	reset_step(init_step);
+	uint8_t tekitou_x;
+	//目標座標を最初にキューにぶち込む
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 3; j++) {
+			if ((i + j) % 2 != 0) {			//2倍座標系では区画の間は奇数にしかありえない
+				temp = std::make_pair<uint8_t, uint8_t>(2 * tar_x + i, 2 * tar_y + j);
+				tekitou_x = temp.first;
+				if (set_step_double(temp, 0))
+					que.push(temp);
+			}
+		}
+	}
+
+
+	uint16_t step = 0;	//現在の歩数
+	uint8_t x, y;	//2倍座標
+	while (!que.empty()) {
+		//キューから座標を取り出す
+		temp = que.front();
+		x = temp.first;
+		y = temp.second;
+		step = get_step_double(x, y);
+		que.pop();	//取り出したので削除
+
+		//隣接座標に歩を進める
+		//斜め方向
+		for (int dx = -1; dx <= 1;dx++) {
+			for (int dy = -1; dy <= 1;dy++) {
+				if ((dx + dy) % 2 == 0) {			//区画の間はXY合計が奇数なので、変化幅はXY軸合計して偶数でないとダメ
+					if (set_step_double(x + dx, y + dy, step + 5))				//歩数を書き込めたら、書き込んだ座標をQueueにぶっこむ
+						que.push(std::make_pair<uint8_t, uint8_t>(x + dx, y + dy));
+				}
+			}
+		}
+		//直進方向　Xが2の倍数（縦壁）のときはX方向にだけ±2がある　Yでも同様　 ※XY両方が偶数になることはないはず
+		if (set_step_double(x + 2 * (1 - x % 2), y + 2 * (1 - y % 2), step + 7))				//歩数を書き込めたら、書き込んだ座標をQueueにぶっこむ
+			que.push(std::make_pair<uint8_t, uint8_t>(x + 2 * (1 - x % 2), y + 2 * (1 - y % 2)));
+		if (set_step_double(x - 2 * (1 - x % 2), y - 2 * (1 - y % 2), step + 7))				//歩数を書き込めたら、書き込んだ座標をQueueにぶっこむ
+			que.push(std::make_pair<uint8_t, uint8_t>(x - 2 * (1 - x % 2), y - 2 * (1 - y % 2)));
+
+
+	}
+}
+
+bool adachi::create_path(std::pair<uint8_t, uint8_t> finish, std::pair<uint8_t, uint8_t> init, compas mouse_direction) {
+	//歩数マップ作製
+	reset_step(init_step);	
+	spread_step_based_distance(finish.first, finish.second);		//FIX_ME ここは既知壁だけで歩数マップ作製
+	
+	
+	//パスを初期化
+	node_path::format();
+	node_path::put_straight(1);			//区画中心にいる想定なので半区間前進
+	
+
+	//向かっている方向の歩数が初期値なら、道が閉じているので終了
+	uint16_t now_step = get_step(init.first, init.second, mouse_direction);
+	if (now_step >= init_step)
+		return false;
+	
+	//歩数の低い方へ下っていく
+	compas now_compas = mouse_direction;
+	uint8_t now_x = init.first;
+	uint8_t now_y = init.second;
+	uint16_t next_step = now_step;
+	compas next_compas = now_compas;
+	while (now_step != 0) {
+
+		//次の方角へマスを移動　※区画外に出るとかは、歩数マップ作成時にはじかれてるはずと信じている
+		switch (next_compas) {
+		case north:
+			now_y += 1;		//y座標を1増やす
+			break;
+		case south:
+			now_y -= 1;		//y座標を1減らす
+			break;
+		case east:
+			now_x += 1;		//x座標を1増やす
+			break;
+		case west:
+			now_x -= 1;		//x座標を1減らす
+			break;
+		}
+				
+		next_compas = get_min_compas(now_x, now_y);	//次に行く方角を決める
+		next_step = get_step(now_x, now_y, next_compas);	//次に行く場所の歩数も取得
+
+		if (now_step <= next_step)
+			return false;		//今の歩数が次行くべき歩数と同じかそれ以下ということはあり得ないはずなので、とりあえず失敗しとく
+		
+
+		
+		//パスを追加
+		if (now_compas == next_compas)
+			node_path::put_straight(2);	//今の向きと同じ方向に進むなら直進
+		else //ターン以外の選択肢はないはず　
+			node_path::put_small_turn(is_right_turn(now_compas, next_compas));
+		
+
+
+		now_step = next_step;	//歩数を更新
+		now_compas = next_compas;	//方角を更新
+
+	}
+	//Path終了
+	node_path::put_straight(1);
+
+	return true;
+
+}
+
+adachi::adachi() {
+}
+
+
+adachi::adachi(uint16_t init_step) {
+	reset_step(init_step);
+}
+
+
+adachi::~adachi() {
+}
+
+std::vector<path_element> node_path::path(1);
+
+PATH node_path::to_PATH(path_element from){
+	PATH ans;
+
+	ans.element.flag = FALSE;
+
+	ans.element.distance = from.distance;
+	
+	if (from.is_right)
+		ans.element.muki = MUKI_RIGHT;
+	else
+		ans.element.muki = MUKI_LEFT;
+	
+	switch (from.turn)
+	{
+	case none:
+		ans.element.flag = TRUE;	//最後の直進で終わりのパターン
+	case s_small:
+	case big_90:
+	case big_180:
+		ans.element.turn = from.turn;
+		break;
+
+	case begin_45:
+	case end_45:
+		ans.element.turn = 4;
+		break;
+	
+	case begin_135:
+	case end_135:
+		ans.element.turn = 5;
+		break;
+	
+	case oblique_90:
+		ans.element.turn = 6;
+		break;
+	}
+
+	return ans;
+
+}
+
+void node_path::format() {
+	std::vector<path_element>(1).swap(path);
+}
+
+void node_path::put_straight(int half) {
+	(path.back()).distance += half;	//直線を増やす
+}
+
+void node_path::put_small_turn(bool is_right) {
+	(path.back()).turn = s_small;		//種類は小回り
+	(path.back()).is_right = is_right;	//右向き
+
+	path_element temp;
+	temp.distance = 0;
+	temp.turn = none;
+	path.emplace_back(temp);	//次の要素を作っておく
+
+}
+
+PATH node_path::get_path(uint16_t index) {
+	if (path.size() <= index) {		//要素外アクセス禁止
+		PATH temp;
+		temp.all = 0;
+		temp.element.flag = TRUE;
+		return temp;
+	}
+	PATH ans = to_PATH(path.at(index));
+	if ((ans.element.distance == 0) && (ans.element.turn == none)) {
+		path.pop_back();		//直進なしかつターンなしの場合（起こりうるのは末尾だけのはず）いらないので削除
+		return get_path(index);
+	}
+	return ans;
+
+}
+
+
+node_path::node_path() {
+	format();
+}
+
+node_path::~node_path() {
+
 }

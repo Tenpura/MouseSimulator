@@ -100,7 +100,20 @@ typedef union {
 	}	element;
 } PATH;
 	
-
+//スラモームの種類
+typedef enum {
+	none = 0,
+	s_small = 1,
+	big_90 = 2,
+	big_180 = 3,
+	begin_45 = 4,
+	end_45 = 5,
+	begin_135 = 6,
+	end_135 = 7,
+	oblique_90 = 8,
+	spin_turn = 9,
+	slalom_type_count		//要素数を表す
+} SLALOM_TYPE;
 		
 	
 	

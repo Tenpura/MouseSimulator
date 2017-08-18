@@ -8,9 +8,11 @@
 #ifndef INCLUDED_MAP
 #define INCLUDED_MAP
 
+#include<stdint.h>
 #include"iodefine.h"
 #include"define.h"
 //#include"extern_c.h"
+#include <queue>
 
 
 extern init_slalom slalom_turn_90_right;		//90°右回転スラローム
@@ -123,8 +125,20 @@ public:
 
 #define STEP_INIT 1024		//歩数の初期値
 
+typedef struct {
+	uint8_t x;
+	uint8_t y;
+} MAZE_GOAL;
 
-class adachi:public map{
+
+class step:public map{
+//追加部分
+private:
+	float node_step[2 * MAZE_SIZE][MAZE_SIZE];	//ノード単位で歩数記録　X方向に倍になってる　区画境界は横と縦の2つあるから
+	//node_step[0][0]が(0,0)の北、node_step[1][0]が(0,0)の東
+	void set_step_adachi(MAZE_GOAL *target);		//Goalを配列で指定すると足立法する
+	
+
 private:
 	union {
 		unsigned char all;				//一括
@@ -137,7 +151,7 @@ private:
 			unsigned char right	:1;		//→	x=1,y=0の方向
 		} element;
 	}save_direction;				//次に行くマスの方向を保存		
-	unsigned int step[MAZE_SIZE][MAZE_SIZE];
+	unsigned int simple_step[MAZE_SIZE][MAZE_SIZE];
 	unsigned int head,tail;		//
 	unsigned char x_coordinate[965];//キューの座標を管理するための配列
 	unsigned char y_coordinate[965];//キューの座標を管理するための配列
@@ -157,8 +171,8 @@ public:
 	void close_dead_end();		//マップ上の袋小路をつぶす
 
 
-	adachi();
-	~adachi();
+	step();
+	~step();
 
 };
 
@@ -174,7 +188,7 @@ typedef union {
 		} element;
 } JUNCTION;				//分岐路を保存		
 
-class path:public adachi{
+class path:public step{
 private:
 	typedef union {
 		unsigned char all;				//一括
@@ -269,5 +283,82 @@ public:
 
 };
 
+
+
+typedef enum {
+	east=0, west=1, north=2, south=3 
+} compas;
+
+class node_step :public map{
+private:
+	std::vector<PATH> path;		
+	static const uint16_t x_size=64;
+	static const uint16_t y_size=32;
+	static uint16_t step[x_size][y_size];			//ノードに配置する歩数	x,y xは横壁と縦壁の両方を表現するために2倍	[0][0]は(0,0)の西壁
+	virtual bool able_set_step(uint8_t x, uint8_t y, compas muki, uint16_t step_val);	//歩を伸ばせるならTrue　壁がないか、その壁を見ているのか、step_valより歩数が大きいかチェック
+	bool is_outside_array(uint8_t x_index, uint8_t y_index);		//配列の添え字でみた座標系（X方向だけ倍）で迷路外（配列外）に出ているか
+
+public:
+	static const uint16_t init_step = 1000;
+	virtual bool set_step(uint8_t x, uint8_t y, compas muki, uint16_t step_val);
+	uint16_t get_step(uint8_t x, uint8_t y, compas muki);
+	compas get_min_compas(uint8_t x, uint8_t y);			//（x,y）の4つの歩数の内、最小の歩数がどの方角か
+
+	void reset_step(uint16_t reset_val);		//全ての歩数をreset_valでリセット
+
+	uint8_t compas_to_define(compas muki);			//列挙型のcompasをDefineされたMUKIに変換する　統一できてないから仕方なく
+
+	node_step();
+	node_step(uint16_t reset_val);
+	~node_step();
+};
+
+class adachi :public node_step{
+private:
+	bool set_step_double(uint8_t double_x, uint8_t double_y, uint16_t step_val);	//XY方向両方に倍取った座標軸での歩数代入関数
+	bool set_step_double(std::pair<uint8_t, uint8_t> xy, uint16_t step_val);		//XY方向両方に倍取った座標軸での歩数代入関数
+	uint16_t get_step_double(uint8_t double_x, uint8_t double_y);		//2倍座標系から歩数を取り出す
+
+	bool is_right_turn(compas now,compas next);		//次のターンが右向きならtrue
+
+public:
+	//TODO 重みづけを管理する構造体？か何かを作ってそれに従って歩数マップを作成するように変更する
+	void spread_step(int tar_x, int tar_y);		//足立法に従って歩数を敷き詰める	
+	void spread_step_based_distance(int tar_x, int tar_y);		//距離ベース（平松法）に従って歩数を敷き詰める	
+
+	bool create_path(std::pair<uint8_t, uint8_t> finish, std::pair<uint8_t, uint8_t> init,compas mouse_direction);		//initマスの中心からfinishマスの中心までのPath　道がふさがってたらFasle
+	//mouse_direction が引数になっている理由
+	//基本的には最短走行か既知区間加速で使うので歩数の小さい方が今行くべき方向と一致しているが、最小歩数が複数あるとヤバいので最初の向きを要求している
+
+	adachi();
+	adachi(uint16_t init_step);
+	~adachi();
+
+};
+
+struct path_element {
+	uint8_t distance;
+	SLALOM_TYPE turn;
+	bool is_right;	//ターンが右か？
+
+};
+
+class node_path:public node_step {
+private:
+	static std::vector<path_element> path;
+	static PATH to_PATH(path_element from);
+	
+public: 
+	static void format();
+
+	static void put_straight(int half);	//何半区間進むか
+	static void put_small_turn(bool is_right);		//小回りでどちらに曲がるか
+
+	static PATH get_path(uint16_t index);	//PATHを直接返す
+
+	node_path();
+	~node_path();
+
+};
 
 #endif /* MAP_H_ */
