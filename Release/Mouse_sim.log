@@ -14,60 +14,17 @@ map.cpp(1536): warning C4244: '+=': 'float' から 'unsigned short' への変換
 map.cpp(1620): warning C4244: '引数': 'double' から 'float' への変換です。データが失われる可能性があります。
 map.cpp(1620): warning C4244: '引数': 'double' から 'int' への変換です。データが失われる可能性があります。
 map.cpp(1753): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
-map.cpp(2595): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
-  mouse_sim.cpp
-c:\users\太嘉志\desktop\mice\マウスシュミレーター\myself\mousesimulator\define.h : warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
-c:\users\太嘉志\desktop\mice\マウスシュミレーター\myself\mousesimulator\map.h : warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
-c:\users\太嘉志\desktop\mice\マウスシュミレーター\myself\mousesimulator\iodefine.h(84): warning C4068: 不明なプラグマがありました。
-c:\users\太嘉志\desktop\mice\マウスシュミレーター\myself\mousesimulator\iodefine.h(85): warning C4068: 不明なプラグマがありました。
-c:\users\太嘉志\desktop\mice\マウスシュミレーター\myself\mousesimulator\iodefine.h(5142): warning C4068: 不明なプラグマがありました。
-c:\users\太嘉志\desktop\mice\マウスシュミレーター\myself\mousesimulator\iodefine.h(5143): warning C4068: 不明なプラグマがありました。
-mouse_sim.cpp(34): warning C4838: 'double' から 'volatile float' への変換には縮小変換が必要です
-mouse_sim.cpp(34): warning C4305: '初期化中': 'double' から 'volatile float' へ切り詰めます。
-mouse_sim.cpp(35): warning C4838: 'double' から 'volatile float' への変換には縮小変換が必要です
-mouse_sim.cpp(35): warning C4305: '初期化中': 'double' から 'volatile float' へ切り詰めます。
-mouse_sim.cpp(37): warning C4838: 'double' から 'volatile float' への変換には縮小変換が必要です
-mouse_sim.cpp(37): warning C4305: '初期化中': 'double' から 'volatile float' へ切り詰めます。
-mouse_sim.cpp(38): warning C4838: 'double' から 'volatile float' への変換には縮小変換が必要です
-mouse_sim.cpp(38): warning C4305: '初期化中': 'double' から 'volatile float' へ切り詰めます。
-mouse_sim.cpp(43): warning C4838: 'double' から 'volatile float' への変換には縮小変換が必要です
-mouse_sim.cpp(43): warning C4305: '初期化中': 'double' から 'volatile float' へ切り詰めます。
-mouse_sim.cpp(48): warning C4838: 'double' から 'volatile float' への変換には縮小変換が必要です
-mouse_sim.cpp(48): warning C4305: '初期化中': 'double' から 'volatile float' へ切り詰めます。
-mouse_sim.cpp(53): warning C4838: 'double' から 'volatile float' への変換には縮小変換が必要です
-mouse_sim.cpp(53): warning C4305: '初期化中': 'double' から 'volatile float' へ切り詰めます。
-mouse_sim.cpp(55): warning C4838: 'double' から 'volatile float' への変換には縮小変換が必要です
-mouse_sim.cpp(55): warning C4305: '初期化中': 'double' から 'volatile float' へ切り詰めます。
-mouse_sim.cpp(62): warning C4838: 'double' から 'volatile float' への変換には縮小変換が必要です
-mouse_sim.cpp(62): warning C4305: '初期化中': 'double' から 'volatile float' へ切り詰めます。
-mouse_sim.cpp(64): warning C4838: 'double' から 'volatile float' への変換には縮小変換が必要です
-mouse_sim.cpp(64): warning C4305: '初期化中': 'double' から 'volatile float' へ切り詰めます。
-mouse_sim.cpp(66): warning C4838: 'double' から 'volatile float' への変換には縮小変換が必要です
-mouse_sim.cpp(66): warning C4305: '初期化中': 'double' から 'volatile float' へ切り詰めます。
-mouse_sim.cpp(67): warning C4838: 'double' から 'volatile float' への変換には縮小変換が必要です
-mouse_sim.cpp(67): warning C4305: '初期化中': 'double' から 'volatile float' へ切り詰めます。
-mouse_sim.cpp(69): warning C4838: 'double' から 'volatile float' への変換には縮小変換が必要です
-mouse_sim.cpp(69): warning C4305: '初期化中': 'double' から 'volatile float' へ切り詰めます。
-mouse_sim.cpp(70): warning C4838: 'double' から 'volatile float' への変換には縮小変換が必要です
-mouse_sim.cpp(70): warning C4305: '初期化中': 'double' から 'volatile float' へ切り詰めます。
-mouse_sim.cpp(72): warning C4838: 'double' から 'volatile float' への変換には縮小変換が必要です
-mouse_sim.cpp(72): warning C4305: '初期化中': 'double' から 'volatile float' へ切り詰めます。
-mouse_sim.cpp(73): warning C4838: 'double' から 'volatile float' への変換には縮小変換が必要です
-mouse_sim.cpp(73): warning C4305: '初期化中': 'double' から 'volatile float' へ切り詰めます。
-mouse_sim.cpp(75): warning C4838: 'double' から 'volatile float' への変換には縮小変換が必要です
-mouse_sim.cpp(75): warning C4305: '初期化中': 'double' から 'volatile float' へ切り詰めます。
-mouse_sim.cpp(76): warning C4838: 'double' から 'volatile float' への変換には縮小変換が必要です
-mouse_sim.cpp(76): warning C4305: '初期化中': 'double' から 'volatile float' へ切り詰めます。
-mouse_sim.cpp(318): warning C4804: '~': 演算中の 'bool' 型の使用方法が安全ではありません
-mouse_sim.cpp(318): warning C4800: 'int': ブール値を 'true' または 'false' に強制的に設定します (警告の処理)
-mouse_sim.cpp(325): warning C4804: '~': 演算中の 'bool' 型の使用方法が安全ではありません
-mouse_sim.cpp(325): warning C4800: 'int': ブール値を 'true' または 'false' に強制的に設定します (警告の処理)
-mouse_sim.cpp(172): warning C4101: 'now_map_data': ローカル変数は 1 度も使われていません。
+map.cpp(2359): warning C4018: '<': signed と unsigned の数値を比較しようとしました。
+map.cpp(2438): warning C4018: '<': signed と unsigned の数値を比較しようとしました。
+map.cpp(2470): warning C4018: '<': signed と unsigned の数値を比較しようとしました。
+map.cpp(2523): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+map.cpp(2728): warning C4267: '初期化中': 'size_t' から 'uint16_t' に変換しました。データが失われているかもしれません。
+map.cpp(2842): warning C4267: '=': 'size_t' から 'uint16_t' に変換しました。データが失われているかもしれません。
   コード生成しています。
-c:\users\太嘉志\desktop\mice\マウスシュミレーター\myself\mousesimulator\map.cpp(2541): warning C4715: 'node_path::is_right_turn': 値を返さないコントロール パスがあります。
-  22 of 785 functions ( 2.8%) were compiled, the rest were copied from previous compilation.
-    2 functions were new in current compilation
-    0 functions had inline decision re-evaluated but remain unchanged
+  1 of 1063 functions ( 0.1%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    2 functions had inline decision re-evaluated but remain unchanged
   コード生成が終了しました。
+search.obj : warning LNK4204: 'C:\Users\太嘉志\Desktop\Mice\マウスシュミレーター\Myself\MouseSimulator\Release\vc140.pdb' に参照するモジュールのデバッグ情報がありません。デバッグ情報を無視してオブジェクトをリンクします。
   Mouse_sim.vcxproj -> C:\Users\太嘉志\Desktop\Mice\マウスシュミレーター\Myself\MouseSimulator\Release\Mouse_sim.exe
   Mouse_sim.vcxproj -> C:\Users\太嘉志\Desktop\Mice\マウスシュミレーター\Myself\MouseSimulator\Release\Mouse_sim.pdb (Full PDB)

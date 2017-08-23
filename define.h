@@ -13,7 +13,7 @@
 
 #define MAZE_MODE	1	//ハーフorクラシック。ハーフなら1,クラシックなら2
 
-#define MAZE_SIZE	16
+#define MAZE_SIZE	32
 #define PATH_MAX	1024
 #define JUNCTION_MAX 1024		//最大いくつ分岐点があると考えるか
 #define ALLOW_OPPOSITE_STEP  99	//時間ベース経路探索で何回まで歩数に逆らってよいか

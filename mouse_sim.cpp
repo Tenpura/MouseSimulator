@@ -20,6 +20,8 @@ using namespace std;
 #define kukaku_size 40	//一区画の大きさ[ピクセル]
 #define pole_size 3		//柱の大きさ(壁の厚さ)[ピクセル]
 
+#define STR(var) #var   //引数にした変数を変数名を示す文字列リテラルとして返すマクロ関数
+
 //#define PI 3.14159	//円周率
 
 static const int console_area = 400;  //スクロールより右部分にコンソール用の空間をどれくらい用意するか
@@ -123,6 +125,8 @@ void direction_turn_half(signed char *direction_x,signed char *direction_y, unsi
 //あるクラスから壁情報を継承する関数
 void get_square(step& orig, step& tar, unsigned char x, unsigned char y);
 
+std::string get_algorithm(weight_algo algo);
+
 // プログラムは WinMain から始まります
 int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine, int nCmdShow )
 {
@@ -165,9 +169,9 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine
 	tool_button[3] = LoadGraph("画像/ツールボタン大.png");
 
 
-
+	
 	step sim_map, now_map;	
-	adachi now_node(node_step::init_step);
+	node_search now_node;
 	path sim_path;
 	MAP_DATA input_data, now_map_data;
 	MAP_DATA temp_map;	//マップ共有用　
@@ -175,7 +179,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine
 
 	status sim_status;		//statusクラス
 
-	unsigned char h_data[16][16]={{14,4,6,5,13,12,4,5,13,12,4,5,12,4,6,5},{12,0,5,8,2,1,9,8,2,1,9,8,1,8,5,9},{9,9,8,1,13,9,8,2,4,1,8,3,11,11,8,1},{9,8,1,8,1,8,1,12,1,8,1,14,4,5,11,9},{8,1,9,9,8,1,8,1,8,3,11,12,1,8,5,9},{9,10,1,8,1,10,1,8,3,14,4,1,9,9,9,9},{8,4,3,9,10,5,10,3,14,4,3,11,11,9,9,9},{9,8,4,2,6,2,5,12,4,0,6,6,7,11,9,9},{8,1,8,4,6,6,3,8,3,10,6,6,6,5,9,9},{9,10,1,9,12,6,4,2,7,12,6,6,6,3,9,9},{9,13,8,1,9,12,1,12,6,2,4,4,4,6,0,3},{9,9,11,9,8,1,11,9,13,13,9,9,9,13,9,13},{9,9,12,3,9,10,5,8,0,0,0,0,0,0,1,9},{9,8,2,5,10,6,2,3,11,11,11,11,11,11,10,1},{8,2,7,10,6,4,6,4,6,6,4,6,4,6,5,9},{10,6,6,6,6,2,6,2,6,6,2,6,2,6,2,3}};
+	unsigned char h_data[16][16]= {{14,4,6,5,13,12,4,5,13,12,4,5,12,4,6,5},{12,0,5,8,2,1,9,8,2,1,9,8,1,8,5,9},{9,9,8,1,13,9,8,2,4,1,8,3,11,11,8,1},{9,8,1,8,1,8,1,12,1,8,1,14,4,5,11,9},{8,1,9,9,8,1,8,1,8,3,11,12,1,8,5,9},{9,10,1,8,1,10,1,8,3,14,4,1,9,9,9,9},{8,4,3,9,10,5,10,3,14,4,3,11,11,9,9,9},{9,8,4,2,6,2,5,12,4,0,6,6,7,11,9,9},{8,1,8,4,6,6,3,8,3,10,6,6,6,5,9,9},{9,10,1,9,12,6,4,2,7,12,6,6,6,3,9,9},{9,13,8,1,9,12,1,12,6,2,4,4,4,6,0,3},{9,9,11,9,8,1,11,9,13,13,9,9,9,13,9,13},{9,9,12,3,9,10,5,8,0,0,0,0,0,0,1,9},{9,8,2,5,10,6,2,3,11,11,11,11,11,11,10,1},{8,2,7,10,6,4,6,4,6,6,4,6,4,6,5,9},{10,6,6,6,6,2,6,2,6,6,2,6,2,6,2,3}};
 
 	sim_map.convert_mapdata(h_data);
 
@@ -201,6 +205,11 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine
 	//ゴール座標
 	unsigned char goal_x = GOAL_x;
 	unsigned char goal_y = GOAL_y;
+	std::vector< std::pair<uint8_t, uint8_t> > finish;
+	finish.emplace_back(std::pair<uint8_t, uint8_t>(goal_x, goal_y));
+	finish.emplace_back(std::pair<uint8_t, uint8_t>(goal_x+1, goal_y));
+	finish.emplace_back(std::pair<uint8_t, uint8_t>(goal_x, goal_y+1));
+	finish.emplace_back(std::pair<uint8_t, uint8_t>(goal_x+1, goal_y+1));
 
 
 	get_square(sim_map,now_map,now_x,now_y);	
@@ -229,7 +238,8 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine
 				now_map.set_step_by_known(goal_x,goal_y);
 				//draw_path(sim_path);
 				
-				if (now_node.create_path(std::pair<uint8_t, uint8_t>(goal_x, goal_y), std::pair<uint8_t, uint8_t>(0, 0), north)) {
+				if (now_node.create_small_path(finish, std::pair<uint8_t, uint8_t>(0, 0), north)) {
+					now_node.create_big_path(finish, std::pair<uint8_t, uint8_t>(0, 0), north);
 					draw_path(nopt);
 				}
 				
@@ -239,21 +249,21 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine
 				//now_mapと同じ壁情報を共有
 				now_map.output_map_data(&temp_map);
 				now_node.map::input_map_data(&temp_map);
-				now_node.spread_step_based_distance(goal_x, goal_y);
+				now_node.spread_step(finish, false);		//未知区間でも歩数をばらまく
 			}
 
-			//		now_map.set_step(goal_x,goal_y);
+			//now_map.set_step(goal_x,goal_y);
 			//draw_step(now_map);
 			draw_step(now_node);
-
-
+			
 			draw_mouse(sim_status.get_x_position(),sim_status.get_y_position(),sim_status.get_direction());
 			draw_all(now_map);	//今マウスが知っている迷路だけを表示
 		}
 		
 
 
-		if(!edit_mode)	DrawFormatString(maze_area_width+10,10,white,"path time  %f",path_time);
+		if (!edit_mode)	DrawFormatString(maze_area_width + 10, 10, white, "path time  %f", path_time);
+		if (!edit_mode)	DrawFormatString(maze_area_width + 10, 30, white, "step -> %s", (get_algorithm(now_node.get_weight_algo())).c_str());
 
 		//使用説明
 		if(edit_mode){
@@ -261,6 +271,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine
 			DrawFormatString(maze_area_width+10,window_length-110,white,"F：シミュレーターを終了する");
 
 		}else{
+			DrawFormatString(maze_area_width + 10, window_length - 190, white, "C：歩数マップの重みづけを変更");
 			DrawFormatString(maze_area_width+10,window_length-170,white,"W：迷路情報を書き込む");
 			DrawFormatString(maze_area_width+10,window_length-150,white,"I：全ての壁を忘れる");
 			DrawFormatString(maze_area_width+10,window_length-130,white,"A：全ての壁を把握する");
@@ -280,8 +291,8 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine
 			now_map.init_map(MAZE_SIZE);
 			sim_map.output_map_data(&input_data);	//map_dataに迷路を吐き出す
 			sim_path.input_map_data(&input_data);
-			sim_path.create_path_naname();
-			path_time = sim_path.calculate_path_time(4000,18000,0);
+			//sim_path.create_path_naname();
+			//path_time = sim_path.calculate_path_time(4000,18000,0);
 		}
 		if(key[KEY_INPUT_A]==1){		
 			sim_map.output_map_data(&input_data);	//map_dataに迷路を吐き出す
@@ -430,12 +441,38 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance,LPSTR lpCmdLine
 				}
 
 				if(key[KEY_INPUT_SPACE]==1){		//スペースキーでゴールを(0,0)に
+					finish.erase(finish.begin(), finish.end());
 					if(goal_x==GOAL_x&&goal_y==GOAL_y){
 						goal_x=0;
 						goal_y=0;
+						finish.emplace_back(std::pair<uint8_t, uint8_t>(goal_x, goal_y));
 					}else{
 						goal_x=GOAL_x;
 						goal_y=GOAL_y;
+						finish.emplace_back(std::pair<uint8_t, uint8_t>(goal_x, goal_y));
+						finish.emplace_back(std::pair<uint8_t, uint8_t>(goal_x + 1, goal_y));
+						finish.emplace_back(std::pair<uint8_t, uint8_t>(goal_x, goal_y + 1));
+						finish.emplace_back(std::pair<uint8_t, uint8_t>(goal_x + 1, goal_y + 1));
+
+					}
+
+					key_flag = true;
+				}
+
+				if (key[KEY_INPUT_C] == 1) {		//Cで歩数マップの重みづけの方法を変更
+					switch (now_node.get_weight_algo()) {
+					case adachi:
+						now_node.set_weight_algo(based_distance);
+						break;
+					case based_distance:
+						now_node.set_weight_algo(priority_straight);
+						break;
+					case priority_straight:
+						now_node.set_weight_algo(T_Wataru_method);
+						break;
+					case T_Wataru_method:
+						now_node.set_weight_algo(adachi);
+						break;
 					}
 					key_flag = true;
 				}
@@ -1130,4 +1167,27 @@ void get_square(step& orig, step& tar, unsigned char x, unsigned char y){
 			tar.forget_exist(x,y,i);
 		}
 	}
+}
+
+
+std::string get_algorithm(weight_algo algo) {
+	std::string str;
+	switch (algo){
+	case adachi:
+		str = "adachi";
+		break;
+	case based_distance:
+		str = "based_distance";
+		break;
+	case priority_straight:
+		str = "priority_straight";
+		break;
+	case T_Wataru_method:
+		str = "T_Wataru_method";
+		break;
+	default:
+		str = "???";
+		break;
+	}
+	return str;
 }

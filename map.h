@@ -295,12 +295,12 @@ private:
 	static const uint16_t x_size=64;
 	static const uint16_t y_size=32;
 	static uint16_t step[x_size][y_size];			//ノードに配置する歩数	x,y xは横壁と縦壁の両方を表現するために2倍	[0][0]は(0,0)の西壁
-	virtual bool able_set_step(uint8_t x, uint8_t y, compas muki, uint16_t step_val);	//歩を伸ばせるならTrue　壁がないか、その壁を見ているのか、step_valより歩数が大きいかチェック
+	virtual bool able_set_step(uint8_t x, uint8_t y, compas muki, uint16_t step_val, bool by_known);	//歩を伸ばせるならTrue　壁がないか、その壁を見ているのか、step_valより歩数が大きいかチェック
 	bool is_outside_array(uint8_t x_index, uint8_t y_index);		//配列の添え字でみた座標系（X方向だけ倍）で迷路外（配列外）に出ているか
 
 public:
-	static const uint16_t init_step = 1000;
-	virtual bool set_step(uint8_t x, uint8_t y, compas muki, uint16_t step_val);
+	static const uint16_t init_step = 60000;
+	virtual bool set_step(uint8_t x, uint8_t y, compas muki, uint16_t step_val, bool by_known);
 	uint16_t get_step(uint8_t x, uint8_t y, compas muki);
 	compas get_min_compas(uint8_t x, uint8_t y);			//（x,y）の4つの歩数の内、最小の歩数がどの方角か
 
@@ -313,33 +313,32 @@ public:
 	~node_step();
 };
 
-
-struct path_element {
+typedef struct {
 	uint8_t distance;
 	SLALOM_TYPE turn;
 	bool is_right;	//ターンが右か？
 
-};
+}  path_element;
 
 class node_path :virtual public node_step {
 private:
 	static std::vector<path_element> path;
+
 	static PATH to_PATH(path_element from);
 	bool is_right_turn(compas now, compas next);		//次のターンが右向きならtrue
-	static void put_straight(int half);	//何半区間進むか
-	static void put_small_turn(bool is_right);		//小回りでどちらに曲がるか
+	static void push_straight(int half);	//何半区間進むか
+	static void push_small_turn(bool is_right);		//小回りでどちらに曲がるか
 
 public:
 	static void format();
 	static PATH get_path(uint16_t index);	//PATHを直接返す
 
-//protected:	//歩数をひいてから実行するのを前提としているので外部アクセス禁止にしておく
-	bool create_path(std::pair<uint8_t, uint8_t> finish, std::pair<uint8_t, uint8_t> init, compas mouse_direction);
+protected:	//歩数をひいてから実行するのを前提としているので外部アクセス禁止にしておく
+	bool create_path(std::pair<uint8_t, uint8_t> init, compas mouse_direction);
 	//initマスの中心からfinishマスの中心までのPath　道がふさがってたらFasle
 	//mouse_direction が引数になっている理由
 	//基本的には最短走行か既知区間加速で使うので歩数の小さい方が今行くべき方向と一致しているが、最小歩数が複数あるとヤバいので最初の向きを要求している
-	bool create_path_naname(std::pair<uint8_t, uint8_t> finish, std::pair<uint8_t, uint8_t> init, compas mouse_direction);;		//斜め大回りパスを生成
-
+	void improve_path();		//既存のPathを大回り斜めに変更
 
 public:
 	node_path();
@@ -347,27 +346,40 @@ public:
 
 };
 
-class adachi :virtual public node_step, virtual public  node_path {
+
+typedef enum {
+	adachi, based_distance, priority_straight,T_Wataru_method
+} weight_algo;
+
+class node_search :virtual public node_step, virtual public  node_path {
 private:
-	bool set_step_double(uint8_t double_x, uint8_t double_y, uint16_t step_val);	//XY方向両方に倍取った座標軸での歩数代入関数
-	bool set_step_double(std::pair<uint8_t, uint8_t> xy, uint16_t step_val);		//XY方向両方に倍取った座標軸での歩数代入関数
+	bool set_step_double(uint8_t double_x, uint8_t double_y, uint16_t step_val, bool by_known);	//XY方向両方に倍取った座標軸での歩数代入関数
+	bool set_step_double(std::pair<uint8_t, uint8_t> xy, uint16_t step_val, bool by_known);		//XY方向両方に倍取った座標軸での歩数代入関数
 	uint16_t get_step_double(uint8_t double_x, uint8_t double_y);		//2倍座標系から歩数を取り出す
+	weight_algo algo;		//重みづけの方法を管理する
 
 public:
-	//TODO 重みづけを管理する構造体？か何かを作ってそれに従って歩数マップを作成するように変更する
-	void spread_step(int tar_x, int tar_y);		//足立法に従って歩数を敷き詰める	
-	void spread_step_based_distance(int tar_x, int tar_y);		//距離ベース（平松法）に従って歩数を敷き詰める	
+	void set_weight_algo(weight_algo weight);		//歩数マップの重みづけを変更する
+	weight_algo get_weight_algo();
 
-	bool create_path(std::pair<uint8_t, uint8_t> finish, std::pair<uint8_t, uint8_t> init,compas mouse_direction);		
+	//set_weight_algoで指定された重みづけに従って歩数を敷き詰める
+	void spread_step(std::vector< std::pair<uint8_t, uint8_t> > finish, bool by_known);		//複数マスゴール対応　もちろん1マスでもおｋ
+
+	bool create_small_path(std::vector< std::pair<uint8_t, uint8_t> > finish, std::pair<uint8_t, uint8_t> init, compas mouse_direction);
 	//initマスの中心からfinishマスの中心までのPath　道がふさがってたらFasle
 	//mouse_direction が引数になっている理由
 	//基本的には最短走行か既知区間加速で使うので歩数の小さい方が今行くべき方向と一致しているが、最小歩数が複数あるとヤバいので最初の向きを要求している
+	bool create_big_path(std::vector< std::pair<uint8_t, uint8_t> > finish, std::pair<uint8_t, uint8_t> init, compas mouse_direction);
+	//大回りパス作製
 
-	adachi();
-	adachi(uint16_t init_step);
-	~adachi();
+
+	node_search();
+	node_search(uint16_t init_step);
+	~node_search();
 
 };
+
+
 
 
 

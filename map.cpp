@@ -2157,13 +2157,14 @@ status::~status(){
 
 uint16_t node_step::step[x_size][y_size];
 
-bool node_step::able_set_step(uint8_t x, uint8_t y, compas muki, uint16_t step_val) {
+bool node_step::able_set_step(uint8_t x, uint8_t y, compas muki, uint16_t step_val, bool by_known) {
 	uint8_t def_muki = compas_to_define(muki);
-	/*
+	
 	//見ていない部分には書き込めない
-	if (map::check_exist(x, y, def_muki) != TRUE) 
-		return false;
-	*/
+	if (by_known) {
+		if (map::check_exist(x, y, def_muki) != TRUE)
+			return false;
+	}
 	
 	//壁がある部分には書き込めない
 	if (map::get_wall(x, y, def_muki) == TRUE)
@@ -2189,7 +2190,7 @@ bool node_step::is_outside_array(uint8_t x_index, uint8_t y_index) {
 	return false;
 }
 
-bool node_step::set_step(uint8_t x, uint8_t y, compas muki, uint16_t step_val){
+bool node_step::set_step(uint8_t x, uint8_t y, compas muki, uint16_t step_val, bool by_known){
 	//代入用の変数
 	uint8_t step_x=x;
 	uint8_t step_y=y;
@@ -2197,10 +2198,10 @@ bool node_step::set_step(uint8_t x, uint8_t y, compas muki, uint16_t step_val){
 	switch (muki) {
 	//南向きと西向きに変更してやりなおし
 	case north:
-		return set_step(x, y + 1, south, step_val);
+		return set_step(x, y + 1, south, step_val, by_known);
 		break;
 	case east:
-		return set_step(x+1, y, west, step_val);
+		return set_step(x+1, y, west, step_val, by_known);
 		break;
 
 	//南と西なら配列用にX座標を対応させる
@@ -2217,7 +2218,7 @@ bool node_step::set_step(uint8_t x, uint8_t y, compas muki, uint16_t step_val){
 		return false;
 	
 	//書き込めるなら
-	if (able_set_step(x,y,muki,step_val)) {
+	if (able_set_step(x,y,muki,step_val, by_known)) {
 		step[step_x][step_y] = step_val;	//配列に歩数代入
 		return true;
 	}
@@ -2306,8 +2307,7 @@ node_step::~node_step() {
 
 }
 
-
-bool adachi::set_step_double(uint8_t double_x, uint8_t double_y, uint16_t step_val) {
+bool node_search::set_step_double(uint8_t double_x, uint8_t double_y, uint16_t step_val, bool by_known) {
 	//2倍座標を通常の座標と向きに直す
 	uint8_t x = double_x / 2;
 	uint8_t y = double_y / 2;
@@ -2317,15 +2317,15 @@ bool adachi::set_step_double(uint8_t double_x, uint8_t double_y, uint16_t step_v
 	else if (double_y % 2 == 0) 	//横壁なら
 		muki = south;
 
-	return node_step::set_step(x, y, muki, step_val);
+	return node_step::set_step(x, y, muki, step_val, by_known);
 	
 }
 
-bool adachi::set_step_double(std::pair<uint8_t, uint8_t> xy, uint16_t step_val) {
-	return set_step_double(xy.first, xy.second, step_val);
+bool node_search::set_step_double(std::pair<uint8_t, uint8_t> xy, uint16_t step_val, bool by_known) {
+	return set_step_double(xy.first, xy.second, step_val, by_known);
 }
 
-uint16_t adachi::get_step_double(uint8_t double_x, uint8_t double_y){
+uint16_t node_search::get_step_double(uint8_t double_x, uint8_t double_y){
 	//2倍座標を通常の座標と向きに直す
 	uint8_t x = double_x / 2;
 	uint8_t y = double_y / 2;
@@ -2338,30 +2338,77 @@ uint16_t adachi::get_step_double(uint8_t double_x, uint8_t double_y){
 	return node_step::get_step(x, y, muki);
 }
 
-void adachi::spread_step(int tar_x, int tar_y) {
+void node_search::set_weight_algo(weight_algo weight) {
+	algo = weight;
+}
+
+weight_algo node_search::get_weight_algo() {
+	return algo;
+}
+
+void node_search::spread_step(std::vector< std::pair<uint8_t, uint8_t> > finish, bool by_known) {
 	//座標管理は歩数の配列(X方向だけ倍)と異なりX,Y方向両方で倍にする　隣接座標の取り扱いが楽だから
 
 	std::queue< std::pair<uint8_t, uint8_t> > que;		//座標管理用Queue　FirstがX、SecondがY
 	std::pair<uint8_t, uint8_t> temp;
-
+	std::queue< std::pair<int8_t, int8_t> > dir;		//方向管理用Queue　FirstがX、SecondがY
+	
 	//歩数をリセット
 	node_step::reset_step(init_step);
-	uint8_t tekitou_x;
 	//目標座標を最初にキューにぶち込む
-	for (int i = 0; i < 3; i++) {
-		for (int j = 0; j < 3; j++) {
-			if ((i + j) % 2 != 0) {			//2倍座標系では区画の間は奇数にしかありえない
-				temp = std::make_pair<uint8_t, uint8_t>(2 * tar_x + i, 2 * tar_y + j);
-				tekitou_x = temp.first;
-				if (set_step_double(temp, 0))
-					que.push(temp);
+	for (int index = 0; index < finish.size();index++) {
+		for (int i = 0; i < 3; i++) {
+			for (int j = 0; j < 3; j++) {
+				if ((i + j) % 2 != 0) {			//2倍座標系では区画の間は奇数にしかありえない
+					temp = std::make_pair<uint8_t, uint8_t>(2 * finish.at(index).first + i, 2 * finish.at(index).second + j);
+					if (set_step_double(temp, 0, by_known)) {
+						que.push(temp);
+						dir.push(std::make_pair<int8_t, int8_t>(static_cast<int8_t>(i - 1), static_cast<int8_t>(j - 1)));		//方向も記録
+					}
+				}
 			}
 		}
 	}
 	
-
 	uint16_t step = 0;	//現在の歩数
 	uint8_t x, y;	//2倍座標
+	int8_t dir_x, dir_y = 0;		//現在の方向
+	int8_t dir_size;		//規格化していないので、判定時に規格化するため
+
+	//歩数の重みを管理
+	uint8_t straight;
+	uint8_t oblique;
+	std::vector<uint8_t> straight_w;
+	std::vector<uint8_t> oblique_w;
+	std::vector<uint8_t> curve_w{0,0,0};
+
+	static const std::vector<uint8_t> temp_s{ 21,20,19,18,17,16,9,4 };		//直進方向の重みづけ
+	static const std::vector<uint8_t> temp_o{ 15,14,13,12,11,10,9,4 };		//斜め方向の重みづけ
+	static const std::vector<uint8_t> temp_c{ 14, 10, 0 };		//カーブに関する重みづけ、90°,45°,0°の順番
+
+
+	switch (get_weight_algo()) {
+	case weight_algo::adachi:
+		straight_w.emplace_back(1);
+		oblique_w.emplace_back(1);
+		break;
+
+	case weight_algo::based_distance:
+		straight_w.emplace_back(7);
+		oblique_w.emplace_back(5);
+		break;
+
+	case weight_algo::T_Wataru_method:
+		curve_w = temp_c;
+	case weight_algo::priority_straight:
+		straight_w = (temp_s);	//staright_wに代入
+		oblique_w = (temp_o);	//oblique_wに代入
+		break;
+
+	}
+
+	
+
 	while (!que.empty()) {
 		//キューから座標を取り出す
 		temp = que.front();
@@ -2370,99 +2417,108 @@ void adachi::spread_step(int tar_x, int tar_y) {
 		step = get_step_double(x, y);
 		que.pop();	//取り出したので削除
 
-		//隣接座標に歩を進める
-		//斜め方向
-		for (int dx = -1; dx <=1;dx++) {		
-			for (int dy = -1; dy <= 1;dy++) {	
-				if ((dx + dy) % 2 == 0) {			//区画の間はXY合計が奇数なので、変化幅はXY軸合計して偶数でないとダメ
-					if (set_step_double(x + dx, y + dy, step + 1))				//歩数を書き込めたら、書き込んだ座標をQueueにぶっこむ
-						que.push(std::make_pair<uint8_t, uint8_t>(x + dx, y + dy));
-				}
-			}
-		}
-		//直進方向　Xが2の倍数（縦壁）のときはX方向にだけ±2がある　Yでも同様　 ※XY両方が偶数になることはないはず
-		if (set_step_double(x + 2 * (1 - x%2), y + 2 * (1 - y%2), step + 1))				//歩数を書き込めたら、書き込んだ座標をQueueにぶっこむ
-			que.push(std::make_pair<uint8_t, uint8_t>(x + 2 * (1 - x % 2), y + 2 * (1 - y % 2)));
-		if (set_step_double(x - 2 * (1 - x % 2), y - 2 * (1 - y % 2), step + 1))				//歩数を書き込めたら、書き込んだ座標をQueueにぶっこむ
-			que.push(std::make_pair<uint8_t, uint8_t>(x - 2 * (1 - x % 2), y - 2 * (1 - y % 2)));
+		//キューから方向を取り出す
+		dir_x = dir.front().first;
+		dir_y = dir.front().second;
+		dir.pop();	//取り出したので削除
+		dir_size = dir_x*dir_x + dir_y*dir_y;		//おおきさを2乗で計算
 
-
-	}
-
-
-}
-
-void adachi::spread_step_based_distance(int tar_x, int tar_y) {
-	//座標管理は歩数の配列(X方向だけ倍)と異なりX,Y方向両方で倍にする　隣接座標の取り扱いが楽だから
-
-	std::queue< std::pair<uint8_t, uint8_t> > que;		//座標管理用Queue　FirstがX、SecondがY
-	std::pair<uint8_t, uint8_t> temp;
-
-	//歩数をリセット
-	node_step::reset_step(init_step);
-	uint8_t tekitou_x;
-	//目標座標を最初にキューにぶち込む
-	for (int i = 0; i < 3; i++) {
-		for (int j = 0; j < 3; j++) {
-			if ((i + j) % 2 != 0) {			//2倍座標系では区画の間は奇数にしかありえない
-				temp = std::make_pair<uint8_t, uint8_t>(2 * tar_x + i, 2 * tar_y + j);
-				tekitou_x = temp.first;
-				if (set_step_double(temp, 0))
-					que.push(temp);
-			}
-		}
-	}
-
-
-	uint16_t step = 0;	//現在の歩数
-	uint8_t x, y;	//2倍座標
-	while (!que.empty()) {
-		//キューから座標を取り出す
-		temp = que.front();
-		x = temp.first;
-		y = temp.second;
-		step = get_step_double(x, y);
-		que.pop();	//取り出したので削除
-
-		//隣接座標に歩を進める
-		//斜め方向
+					//斜め方向
 		for (int dx = -1; dx <= 1;dx++) {
 			for (int dy = -1; dy <= 1;dy++) {
-				if ((dx + dy) % 2 == 0) {			//区画の間はXY合計が奇数なので、変化幅はXY軸合計して偶数でないとダメ
-					if (set_step_double(x + dx, y + dy, step + 5))				//歩数を書き込めたら、書き込んだ座標をQueueにぶっこむ
-						que.push(std::make_pair<uint8_t, uint8_t>(x + dx, y + dy));
+				if (dx == 0 && dy == 0) {
+					//自分の今いるところなので何もしない
+				}else if ((dx + dy) % 2 == 0) {			//区画の間はXY合計が奇数なので、変化幅はXY軸合計して偶数でないとダメ
+					if ((dx*dir_x + dy*dir_y) >= 0) {		//現在の方向に対して、0°、45°、90°の方向だけチェックすればよい　135°180°は負になる
+						dir_size *= (dx*dx + dy*dy);	//内積相手のサイズも考慮する　
+						step += curve_w.at((dx*dir_x + dy*dir_y)*(dx*dir_x + dy*dir_y) * 2 / dir_size);;			//カーブすることに対する重みを足す	添え字は内積の2乗 2をかけているのは分数を整数にするため
+						//その直線方向に、書き込めなくなるまで書き込んでいく	
+						for (int i = 0; ;i++) {
+							//直線が続くと足していく歩数は小さくなっていく
+							if (i < oblique_w.size())
+								oblique = oblique_w.at(i);			//要素外に出る場合は値を更新しない＝最後の値が続く
+							//歩数を書き込めたら、書き込んだ座標をQueueにぶっこむ
+							if (set_step_double(x + dx * (i + 1), y + dy * (i + 1), step + oblique, by_known)) {
+								step += oblique;		//ステップを更新
+								que.push(std::make_pair<uint8_t, uint8_t>(x + (i + 1) * dx, y + (i + 1) * dy));
+								dir.push(std::make_pair<int8_t, int8_t>(static_cast<int8_t>(dx), static_cast<int8_t>(dy)));		//方向も記録
+							}
+							else
+								break;	//書き込めなくなったらループを抜ける
+						}
+						dir_size /= (dx*dx + dy*dy);	//内積相手のサイズは引いておく
+
+					}
+					step = get_step_double(x, y);		//ステップをリセット
+
 				}
 			}
 		}
-		//直進方向　Xが2の倍数（縦壁）のときはX方向にだけ±2がある　Yでも同様　 ※XY両方が偶数になることはないはず
-		if (set_step_double(x + 2 * (1 - x % 2), y + 2 * (1 - y % 2), step + 7))				//歩数を書き込めたら、書き込んだ座標をQueueにぶっこむ
-			que.push(std::make_pair<uint8_t, uint8_t>(x + 2 * (1 - x % 2), y + 2 * (1 - y % 2)));
-		if (set_step_double(x - 2 * (1 - x % 2), y - 2 * (1 - y % 2), step + 7))				//歩数を書き込めたら、書き込んだ座標をQueueにぶっこむ
-			que.push(std::make_pair<uint8_t, uint8_t>(x - 2 * (1 - x % 2), y - 2 * (1 - y % 2)));
+		//直進方向　Xが2の倍数（縦壁）のときはX方向にだけ±2がある　横壁のときはYだけに　 ※XY両方が偶数になることはないはず
+		//その直線方向に、書き込めなくなるまで書き込んでいく	
+		for (int sign = -1; sign < 2; sign += 2) {
+			int delta_x, delta_y;	//座標代入時の変数（見やすさのため）
+			int dx = (1 - x % 2) * sign;		//方向管理用
+			int dy = (1 - y % 2) * sign;		//方向管理用
 
+			if ((dx*dir_x + dy*dir_y) >= 0) {		//現在の方向に対して、0°、45°、90°の方向だけチェックすればよい　135°180°は負になる
+				dir_size *= (dx*dx + dy*dy);	//内積相手のサイズも考慮する　
+				step += curve_w.at((dx*dir_x + dy*dir_y)*(dx*dir_x + dy*dir_y) * 2 / dir_size);;			//カーブすることに対する重みを足す	添え字は内積の2乗 2をかけているのは分数を整数にするため
+
+				for (int i = 0; ;i++) {
+					//直線が続くと足していく歩数は小さくなっていく
+					if (i < straight_w.size())
+						straight = straight_w.at(i);			//要素外に出る場合は値を更新しない＝最後の値が続く
+
+					delta_x = 2 * dx * (i + 1);
+					delta_y = 2 * dy * (i + 1);
+					//歩数を書き込めたら、書き込んだ座標をQueueにぶっこむ
+					if (set_step_double(x + delta_x, y + delta_y, step + straight, by_known)) {
+						step += straight;		//ステップを更新
+						que.push(std::make_pair<uint8_t, uint8_t>(x + delta_x, y + delta_y));
+						dir.push(std::make_pair<int8_t, int8_t>(static_cast<int8_t>(dx), static_cast<int8_t>(dy)));		//方向も記録
+					}
+					else
+						break;	//書き込めなくなったらループを抜ける
+				}
+				dir_size /= (dx*dx + dy*dy);	//内積相手のサイズは引いておく
+
+			}
+			step = get_step_double(x, y);		//ステップをリセット
+		}
 
 	}
+
 }
 
-bool adachi::create_path(std::pair<uint8_t, uint8_t> finish, std::pair<uint8_t, uint8_t> init, compas mouse_direction) {
+bool node_search::create_small_path(std::vector< std::pair<uint8_t, uint8_t> > finish, std::pair<uint8_t, uint8_t> init, compas mouse_direction) {
 	//歩数マップ作製
 	node_step::reset_step(init_step);
-	spread_step_based_distance(finish.first, finish.second);		//FIX_ME ここは既知壁だけで歩数マップ作製
-	return node_path::create_path(finish, init, mouse_direction);		//歩数マップに従ってパス作製
+	spread_step(finish, true);		//ここは既知壁だけで歩数マップ作製
+	return node_path::create_path(init, mouse_direction);		//歩数マップに従ってパス作製
 
 }
 
-adachi::adachi() {
+bool node_search::create_big_path(std::vector< std::pair<uint8_t, uint8_t> > finish, std::pair<uint8_t, uint8_t> init, compas mouse_direction) {
+	if (create_small_path(finish, init, mouse_direction)) {		//小回りパス作製
+		node_path::improve_path();		//小回りを大回りパスに改良
+		return true;
+	}
+	return false;
 }
 
+node_search::node_search() {
+	set_weight_algo(weight_algo::adachi);
+}
 
-adachi::adachi(uint16_t init_step) {
+node_search::node_search(uint16_t init_step) {
 	node_step::reset_step(init_step);
+	set_weight_algo(weight_algo::adachi);
 }
 
-
-adachi::~adachi() {
+node_search::~node_search() {
 }
+
 
 std::vector<path_element> node_path::path(1);
 
@@ -2544,11 +2600,11 @@ void node_path::format() {
 	std::vector<path_element>(1).swap(path);
 }
 
-void node_path::put_straight(int half) {
+void node_path::push_straight(int half) {
 	(path.back()).distance += half;	//直線を増やす
 }
 
-void node_path::put_small_turn(bool is_right) {
+void node_path::push_small_turn(bool is_right) {
 	(path.back()).turn = s_small;		//種類は小回り
 	(path.back()).is_right = is_right;	//右向き
 
@@ -2559,9 +2615,9 @@ void node_path::put_small_turn(bool is_right) {
 
 }
 
-bool node_path::create_path(std::pair<uint8_t, uint8_t> finish, std::pair<uint8_t, uint8_t> init, compas mouse_direction) {
+bool node_path::create_path(std::pair<uint8_t, uint8_t> init, compas mouse_direction) {
 	node_path::format();				//パスを初期化
-	node_path::put_straight(1);			//区画中心にいる想定なので半区間前進
+	node_path::push_straight(1);			//区画中心にいる想定なので半区間前進
 
 										//向かっている方向の歩数が初期値なら、道が閉じているので終了
 	uint16_t now_step = get_step(init.first, init.second, mouse_direction);
@@ -2572,6 +2628,7 @@ bool node_path::create_path(std::pair<uint8_t, uint8_t> finish, std::pair<uint8_
 	compas now_compas = mouse_direction;
 	uint8_t now_x = init.first;
 	uint8_t now_y = init.second;
+	int8_t dx, dy;
 	uint16_t next_step = now_step;
 	compas next_compas = now_compas;
 	while (now_step != 0) {
@@ -2579,43 +2636,218 @@ bool node_path::create_path(std::pair<uint8_t, uint8_t> finish, std::pair<uint8_
 		//次の方角へマスを移動　※区画外に出るとかは、歩数マップ作成時にはじかれてるはずと信じている
 		switch (next_compas) {
 		case north:
-			now_y += 1;		//y座標を1増やす
+			//now_y += 1;
+			dx = 0;
+			dy = 1;		
 			break;
 		case south:
-			now_y -= 1;		//y座標を1減らす
+			//now_y -= 1;
+			dx = 0;
+			dy = -1;	
 			break;
 		case east:
-			now_x += 1;		//x座標を1増やす
+			//now_x += 1;
+			dx = 1;		
+			dy = 0;
 			break;
 		case west:
-			now_x -= 1;		//x座標を1減らす
+			//now_x -= 1;
+			dx = -1;	
+			dy = 0;
 			break;
 		}
-
-		next_compas = get_min_compas(now_x, now_y);	//次に行く方角を決める
+		now_x += dx;		//X座標更新
+		now_y += dy;		//Y座標更新
+		
+		next_compas = get_min_compas(now_x, now_y);			//次に行く方角を決める
 		next_step = get_step(now_x, now_y, next_compas);	//次に行く場所の歩数も取得
 
 		if (now_step <= next_step)
 			return false;		//今の歩数が次行くべき歩数と同じかそれ以下ということはあり得ないはずなので、とりあえず失敗しとく
 
-
-
 								//パスを追加
 		if (now_compas == next_compas)
-			node_path::put_straight(2);	//今の向きと同じ方向に進むなら直進
+			node_path::push_straight(2);	//今の向きと同じ方向に進むなら直進
 		else //ターン以外の選択肢はないはず　
-			node_path::put_small_turn(is_right_turn(now_compas, next_compas));
-
-
+			node_path::push_small_turn(is_right_turn(now_compas, next_compas));
 
 		now_step = next_step;	//歩数を更新
 		now_compas = next_compas;	//方角を更新
 
 	}
-	//Path終了
-	node_path::put_straight(1);
 
+
+	//次の方角の変化方向を取得
+	switch (next_compas) {
+	case north:
+		//now_y += 1;
+		dx = 0;
+		dy = 1;
+		break;
+	case south:
+		//now_y -= 1;
+		dx = 0;
+		dy = -1;
+		break;
+	case east:
+		//now_x += 1;
+		dx = 1;
+		dy = 0;
+		break;
+	case west:
+		//now_x -= 1;
+		dx = -1;
+		dy = 0;
+		break;
+	}
+
+	//複数マスゴールの場合用に、0の続く限り直進
+	while (1) {
+		now_x += dx;		//X座標更新
+		now_y += dy;		//Y座標更新
+
+		if (get_step(now_x, now_y, next_compas) != 0) {	//ゴール外に出たら
+			break;
+		}
+		else {									//ゴール区画がまだ続くなら
+			node_path::push_straight(2);
+		}
+
+	}
+	
+	node_path::push_straight(1);		//区画に入りきるために半区画直進して終了
 	return true;
+
+}
+
+void node_path::improve_path() {
+	
+	uint16_t count = 0;
+	uint8_t temp_distance = 0;	//一時的な距離保存		
+	bool naname_flag = false;	//現在機体が斜めかを判断	ONなら斜め走行中
+	uint16_t size = path.size();
+
+	path.at(size - 1).distance -= 1;	//最後の区画の中心まで入り込むための半区間直進を消す。　こうしておかないと最後が大回りに丸め込まれて減速できなくなる可能性があるから
+
+	while (count < path.size()) {		//pathが終われば終了
+		if (naname_flag) {							//斜め走行中なら	確実に直進距離(distance)が0のはず
+
+			if (get_path(count+1).element.distance >= 1) {			//次のターン後90mm以上直進(斜め終わり)
+				path.at(count).turn=end_45;							//45°ターンに変更
+				path.at(count + 1).distance -= 1;					//直線距離を90mm減らす
+				naname_flag = false;
+				count++;												//配列を次へ
+
+			}
+			else if (get_path(count + 2).element.distance >= 1) {	//次の次のターン後90mm以上直進(斜め終わり)
+
+				if (path.at(count).is_right == path.at(count+1).is_right) {		//同じ方向の2回ターン
+					path.at(count).turn = end_135;					//135°ターンに変更
+					path.erase(path.begin() + count + 1);							//一個ずらす
+					path.at(count + 1).distance -= 1;			//ターン後の直線距離を90mm減らす
+					naname_flag = false;
+					count++;										//配列を次へ
+
+				}
+				else {																//交互のターン(ギザギザ)
+					path.at(count).distance += 1;				//斜めの直線距離を1増やす
+					temp_distance = path.at(count).distance;	//距離を一時的に持っておく
+					path.erase(path.begin() + count);							//一個ずらす
+					path.at(count).distance = temp_distance;	//距離を入れなおす
+
+				}
+
+			}
+			else {												//まだまだ斜めは続くなら
+				if (count + 1 < size) {		//次のパスが存在する
+					if (path.at(count + 1).turn == none) {
+						//斜めの大回りで終わるパターン
+						temp_distance = path.at(count).distance;	//距離を一時的に持っておく
+						path.erase(path.begin() + count);							//一個ずらす
+						path.at(count).distance = temp_distance;	//距離を入れなおす						count++;
+						naname_flag = false;
+					}
+					else {
+						if (path.at(count).is_right == path.at(count + 1).is_right) {		//同じ方向の2回ターン	コの字
+							path.at(count).turn = oblique_90;					//斜め90°ターンに変更
+							path.erase(path.begin() + count + 1);							//一個ずらす
+							count++;										//配列を次へ
+						}
+						else {																//違う方向の2回ターン	ギザギザ
+							path.at(count).distance += 1;				//斜めの直線距離を1増やす
+							temp_distance = path.at(count).distance;	//距離を一時的に持っておく
+							path.erase(path.begin() + count);							//一個ずらす
+							path.at(count).distance = temp_distance;	//距離を入れなおす
+
+						}
+					}
+				}				
+				else {																//TODO 斜めのままパスが終了する　とりあえず入りきらずに終了する
+					//FIX_ME 斜めのまま終了するときの処理
+					path.at(count).distance += 1;				//斜めの直線距離を1増やす
+					path.at(count).turn = none;	
+					count = size;	//終了
+				}
+			}
+
+		}
+		else {										//斜めじゃなければ
+
+			if (count + 1 < size) {	//count+1でもパスが終わらないなら
+
+				if (path.at(count + 1).distance >= 1) {		//ターン後も90mm以上直進するなら	大回りのチェックを行う
+
+					if ((count != 0) || (path.at(0).distance > 1)) {		//初っ端のターンじゃなければ
+						path.at(count).turn = big_90;					//大回りターンに変更
+						path.at(count).distance -= 1;				//直線距離を90mm減らす
+						path.at(count + 1).distance -= 1;			//直線距離を90mm減らす
+
+					}
+
+				}
+				else {											//ターン後90mm直進はしないなら
+
+					if (path.at(count).is_right == path.at(count + 1).is_right) {	//同じ方向に曲がるなら(Uターン)
+						if (count + 2 < size) {			//2つ先までパスが存在するなら
+							if (path.at(count + 2).distance >= 1) {		//Uターン後90mm直進するなら
+								path.at(count).turn = big_180;					//180°ターンに変更
+								path.at(count).distance -= 1;				//直線距離を90mm減らす
+								path.at(count + 2).distance -= 1;			//直線距離を90mm減らす
+								path.erase(path.begin() + count + 1);		//一個ずらす
+
+							}
+							else {											//Uターン後すぐ曲がるなら
+								path.at(count).turn = begin_135;					//135°ターンに変更
+								path.at(count).distance -= 1;				//直線距離を90mm減らす
+								path.erase(path.begin()+ count + 1);							//一個ずらす
+								naname_flag = true;
+
+							}
+							
+						}
+					}
+					else {		//違う方法に曲がるなら
+						path.at(count).turn = begin_45;							//45°ターンに変更
+						path.at(count).distance -= 1;						//直線距離を90mm減らす
+						naname_flag = true;
+
+					}
+					
+
+				}
+			}
+			count++;		//配列を次へ
+		}
+
+		size = path.size();		//sizeを更新
+
+	}
+
+	//最初に1つ削ったから忘れず足しておく
+	if(naname_flag)
+		path.at(size - 1).distance -= 1;
+	else
+		path.at(size - 1).distance += 1;
 
 }
 
@@ -2623,21 +2855,21 @@ bool node_path::create_path(std::pair<uint8_t, uint8_t> finish, std::pair<uint8_
 
 PATH node_path::get_path(uint16_t index) {
 	if (path.size() <= index) {		//要素外アクセス禁止
-		PATH temp;
-		temp.all = 0;
-		temp.element.flag = TRUE;
-		return temp;
+		path_element temp;
+		temp.distance = 0;
+		temp.turn = none;
+		PATH ans = to_PATH(temp);
+		ans.element.flag = TRUE;
+		return ans;
 	}
-	PATH ans = to_PATH(path.at(index));
-	if ((ans.element.distance == 0) && (ans.element.turn == none)) {
-		path.pop_back();		//直進なしかつターンなしの場合（起こりうるのは末尾だけのはず）いらないので削除
-		return get_path(index);
+	path_element tar = path.at(index);
+	if ((tar.distance == 0) && (tar.turn == none)) {
+		//path.erase(path.begin() + index);		//直進なしかつターンなしの場合（起こりうるのは末尾だけのはず）いらないので削除
+		return get_path(index+1);
 	}
-	return ans;
+	return to_PATH(tar);
 
 }
-
-
 
 
 node_path::node_path() {
