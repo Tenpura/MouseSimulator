@@ -18,8 +18,8 @@
 #define JUNCTION_MAX 1024		//最大いくつ分岐点があると考えるか
 #define ALLOW_OPPOSITE_STEP  99	//時間ベース経路探索で何回まで歩数に逆らってよいか
 
-#define GOAL_x	7
-#define GOAL_y	7
+#define GOAL_x	3
+#define GOAL_y	3
 
 #define myprintf	//
 

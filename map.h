@@ -34,6 +34,9 @@ extern init_slalom slalom_turn_90_oblique_right[2];		//90°右回転大回りス
 extern init_slalom slalom_big_turn_180_left[2];	//180°左回転大回りスラローム
 extern init_slalom slalom_big_turn_180_right[2];	//180°右回転大回りスラローム
 
+extern int g_max_queue_size_cell;		//キューサイズの最大を管理（マスに歩数を置く方用）
+extern int g_mouse_x, g_mouse_y;		//マウスの座標
+
 typedef union {
 	unsigned long all;		//全て一括で変更する用
 	struct {
@@ -104,7 +107,7 @@ public:
 	unsigned char check_exist(unsigned char wall_x, unsigned char wall_y, unsigned char muki);	//既に見ていればTRUE、見てなければFALSE
 
 	void draw_map();		//myprintfで迷路を描画
-	void convert_mapdata(unsigned char (*hiramatu_data)[16]);		//平松先輩のマップデータ形式をノノホ式に変換
+	void convert_mapdata(unsigned char (*hiramatu_data)[32]);		//平松先輩のマップデータ形式をノノホ式に変換
 	unsigned char output_Hiramatu(int x, int y);					//(x,y)マスの壁情報を平松形式で出力
 
 	void input_map_data(MAP_DATA *input_data);			//外部に保存したデータの入力
@@ -122,8 +125,7 @@ public:
 
 
 
-
-#define STEP_INIT 1024		//歩数の初期値
+#define STEP_INIT 9999		//歩数の初期値
 
 typedef struct {
 	uint8_t x;
@@ -153,8 +155,8 @@ private:
 	}save_direction;				//次に行くマスの方向を保存		
 	unsigned int simple_step[MAZE_SIZE][MAZE_SIZE];
 	unsigned int head,tail;		//
-	unsigned char x_coordinate[965];//キューの座標を管理するための配列
-	unsigned char y_coordinate[965];//キューの座標を管理するための配列
+	unsigned char x_coordinate[1965];//キューの座標を管理するための配列
+	unsigned char y_coordinate[1965];//キューの座標を管理するための配列
 	
 	void step_reset();
 	void step_reset_all_search();
@@ -346,6 +348,7 @@ public:
 
 };
 
+extern int g_max_queue_size;
 
 typedef enum {
 	adachi, based_distance, priority_straight,T_Wataru_method
@@ -380,7 +383,7 @@ public:
 };
 
 
-
+int cal_Manhattan(int _dx, int _dy);	//マンハッタン距離を計算
 
 
 #endif /* MAP_H_ */

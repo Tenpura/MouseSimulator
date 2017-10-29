@@ -6,24 +6,31 @@ c:\users\太嘉志\desktop\mice\マウスシュミレーター\myself\mousesimul
 c:\users\太嘉志\desktop\mice\マウスシュミレーター\myself\mousesimulator\iodefine.h(5142): warning C4068: 不明なプラグマがありました。
 c:\users\太嘉志\desktop\mice\マウスシュミレーター\myself\mousesimulator\iodefine.h(5143): warning C4068: 不明なプラグマがありました。
 c:\users\太嘉志\desktop\mice\マウスシュミレーター\myself\mousesimulator\define.h : warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
-map.cpp(979): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
-map.cpp(1525): warning C4244: '=': 'float' から 'unsigned short' への変換です。データが失われる可能性があります。
-map.cpp(1526): warning C4244: '+=': 'float' から 'unsigned short' への変換です。データが失われる可能性があります。
-map.cpp(1535): warning C4244: '=': 'float' から 'unsigned short' への変換です。データが失われる可能性があります。
-map.cpp(1536): warning C4244: '+=': 'float' から 'unsigned short' への変換です。データが失われる可能性があります。
-map.cpp(1620): warning C4244: '引数': 'double' から 'float' への変換です。データが失われる可能性があります。
-map.cpp(1620): warning C4244: '引数': 'double' から 'int' への変換です。データが失われる可能性があります。
-map.cpp(1753): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
-map.cpp(2359): warning C4018: '<': signed と unsigned の数値を比較しようとしました。
-map.cpp(2438): warning C4018: '<': signed と unsigned の数値を比較しようとしました。
-map.cpp(2470): warning C4018: '<': signed と unsigned の数値を比較しようとしました。
-map.cpp(2523): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
-map.cpp(2728): warning C4267: '初期化中': 'size_t' から 'uint16_t' に変換しました。データが失われているかもしれません。
-map.cpp(2842): warning C4267: '=': 'size_t' から 'uint16_t' に変換しました。データが失われているかもしれません。
+map.cpp(799): warning C4018: '>': signed と unsigned の数値を比較しようとしました。
+map.cpp(812): warning C4018: '>': signed と unsigned の数値を比較しようとしました。
+map.cpp(830): warning C4018: '>': signed と unsigned の数値を比較しようとしました。
+map.cpp(848): warning C4018: '>': signed と unsigned の数値を比較しようとしました。
+map.cpp(866): warning C4018: '>': signed と unsigned の数値を比較しようとしました。
+map.cpp(887): warning C4018: '>': signed と unsigned の数値を比較しようとしました。
+map.cpp(961): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+map.cpp(1570): warning C4244: '=': 'float' から 'unsigned short' への変換です。データが失われる可能性があります。
+map.cpp(1571): warning C4244: '+=': 'float' から 'unsigned short' への変換です。データが失われる可能性があります。
+map.cpp(1580): warning C4244: '=': 'float' から 'unsigned short' への変換です。データが失われる可能性があります。
+map.cpp(1581): warning C4244: '+=': 'float' から 'unsigned short' への変換です。データが失われる可能性があります。
+map.cpp(1665): warning C4244: '引数': 'double' から 'float' への変換です。データが失われる可能性があります。
+map.cpp(1665): warning C4244: '引数': 'double' から 'int' への変換です。データが失われる可能性があります。
+map.cpp(1733): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+map.cpp(2404): warning C4018: '<': signed と unsigned の数値を比較しようとしました。
+map.cpp(2458): warning C4018: '>': signed と unsigned の数値を比較しようとしました。
+map.cpp(2485): warning C4018: '<': signed と unsigned の数値を比較しようとしました。
+map.cpp(2516): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+map.cpp(2517): warning C4018: '<': signed と unsigned の数値を比較しようとしました。
+map.cpp(2775): warning C4267: '初期化中': 'size_t' から 'uint16_t' に変換しました。データが失われているかもしれません。
+map.cpp(2889): warning C4267: '=': 'size_t' から 'uint16_t' に変換しました。データが失われているかもしれません。
   コード生成しています。
-  1 of 1063 functions ( 0.1%) were compiled, the rest were copied from previous compilation.
+  2 of 1055 functions ( 0.2%) were compiled, the rest were copied from previous compilation.
     0 functions were new in current compilation
-    2 functions had inline decision re-evaluated but remain unchanged
+    0 functions had inline decision re-evaluated but remain unchanged
   コード生成が終了しました。
 search.obj : warning LNK4204: 'C:\Users\太嘉志\Desktop\Mice\マウスシュミレーター\Myself\MouseSimulator\Release\vc140.pdb' に参照するモジュールのデバッグ情報がありません。デバッグ情報を無視してオブジェクトをリンクします。
   Mouse_sim.vcxproj -> C:\Users\太嘉志\Desktop\Mice\マウスシュミレーター\Myself\MouseSimulator\Release\Mouse_sim.exe

@@ -551,9 +551,9 @@ void map::draw_map() {
 
 }
 
-void map::convert_mapdata(unsigned char (*hiramatu_data)[16]){
-	for(char x=0;x<16;x++){
-		for(char y=0;y<16;y++){
+void map::convert_mapdata(unsigned char (*hiramatu_data)[32]){
+	for(char x=0;x<32;x++){
+		for(char y=0;y<32;y++){
 			if((hiramatu_data[x][y] & 2) == 2){		//東壁があれば
 				create_wall(x,y,MUKI_RIGHT);
 			}else{
@@ -664,6 +664,7 @@ void step::set_step_adachi(MAZE_GOAL *target) {
 		if ((x_count - 1) >= 0) {		//座標が迷路内(x-1が0以上)にあり
 			if ((simple_step[x_count - 1][y_count] == STEP_INIT)) {		//歩数を入れてない（入ってる歩数がSTEP_INIT）
 				if (get_wall(x_count, y_count, MUKI_LEFT) == FALSE) {		//元のマスの左壁がないなら
+					
 					simple_step[x_count - 1][y_count] = simple_step[x_count][y_count] + 1;		//歩数を代入
 																								//この座標を保持
 					x_coordinate[head] = (x_count - 1);
@@ -756,12 +757,20 @@ void step::step_reset_all_search(){
 	}
 }
 
-void step::set_step(unsigned char target_x,unsigned char target_y){
+void step::set_step(unsigned char _tar_x,unsigned char _tar_y){
 	unsigned char x_count=0,y_count=0;	//一時的に座標をもっとくよう
+	
+	bool debranch = true;		//枝切を行うか否か
+	bool A_star = false;		//A*を行うかどうか	とりあえずhはマンハッタン距離
+	unsigned char init_x = g_mouse_x;		//歩数を敷くうえで自分のいるマス　
+	unsigned char init_y = g_mouse_y;
 	
 
 	step_reset();
-	simple_step[target_x][target_y]=0;
+	simple_step[_tar_x][_tar_y] = 0;
+	if(A_star)
+		simple_step[_tar_x][_tar_y] = cal_Manhattan(_tar_x - 0, _tar_y - 0);
+
 
 	//coordinate  [tail][][][] -> [][][head]
 	
@@ -769,21 +778,39 @@ void step::set_step(unsigned char target_x,unsigned char target_y){
 	tail = 0;
 
 	//Qの最初には目標の座標を入れとく
-	x_coordinate[tail] = target_x;
-	y_coordinate[tail] = target_y;
+	x_coordinate[tail] = _tar_x;
+	y_coordinate[tail] = _tar_y;
+
+	int now_cost;		//今見ているマスのコスト
+	int next_cost;		//次に代入するコスト
 
 	while(head != tail){
 		//座標を代入
 		x_count = x_coordinate[tail];
 		y_count = y_coordinate[tail];
 
-		tail++;		
-					
+		//今見ているマスのコスト
+		now_cost = simple_step[x_count][y_count];
+
+		tail++;
+
+		
+		//枝切
+		if (debranch && (now_cost > simple_step[init_x][init_y])) {
+			//スタート位置よりコストが高いところは見ない
+		}
+		else {
+		
 			//左マス
-			if( (x_count-1) >= 0 ){		//座標が迷路内(x-1が0以上)にあり
-				if( (simple_step[x_count-1][y_count] == STEP_INIT) ){		//歩数を入れてない（入ってる歩数がSTEP_INIT）
-					if( get_wall(x_count,y_count,MUKI_LEFT)==FALSE ){		//元のマスの左壁がないなら
-						simple_step[x_count-1][y_count] = simple_step[x_count][y_count]+1;		//歩数を代入
+			if ((x_count - 1) >= 0) {		//座標が迷路内(x-1が0以上)にあり
+				if (get_wall(x_count, y_count, MUKI_LEFT) == FALSE) {		//元のマスの左壁がないなら
+					next_cost = now_cost + 1;		//通常歩数
+					if (A_star) {
+						next_cost += 1;		//マンハッタン距離より重みを付けるために歩数を倍に
+						next_cost += cal_Manhattan(x_count - 1 - init_x, y_count - init_y) - cal_Manhattan(x_count - init_x, y_count - init_y);
+					}
+					if ((simple_step[x_count - 1][y_count] > next_cost)) {		//歩数を入れてない（入ってる歩数がSTEP_INIT）
+						simple_step[x_count - 1][y_count] = next_cost;		//歩数を代入
 						//この座標を保持
 						x_coordinate[head] = (x_count - 1);
 						y_coordinate[head] = y_count;
@@ -791,38 +818,53 @@ void step::set_step(unsigned char target_x,unsigned char target_y){
 					}
 				}
 			}
-						
+
 			//右マス
-			if( (x_count+1) < MAZE_SIZE ){	//座標が迷路内(x+1がMAZE_SIZE未満)にあり
-				if( (simple_step[x_count+1][y_count] == STEP_INIT) ){	//歩数を入れてない（入ってる歩数がSTEP_INIT）
-					if( get_wall(x_count,y_count,MUKI_RIGHT)==FALSE ){		//元のマスの右壁がない
-						simple_step[x_count+1][y_count] = simple_step[x_count][y_count]+1;	//歩数を代入
-						//この座標を保持
+			if ((x_count + 1) < MAZE_SIZE) {	//座標が迷路内(x+1がMAZE_SIZE未満)にあり
+				if (get_wall(x_count, y_count, MUKI_RIGHT) == FALSE) {		//元のマスの右壁がない
+					next_cost = now_cost + 1;
+					if (A_star) {
+						next_cost += 1;		//マンハッタン距離より重みを付けるために歩数を倍に
+						next_cost += cal_Manhattan(x_count + 1 - init_x, y_count - init_y) - cal_Manhattan(x_count - init_x, y_count - init_y);
+					}
+					if ((simple_step[x_count + 1][y_count] > next_cost)) {	//歩数を入れてない（入ってる歩数がSTEP_INIT）
+						simple_step[x_count + 1][y_count] = now_cost + 1;	//歩数を代入
+					//この座標を保持
 						x_coordinate[head] = (x_count + 1);
 						y_coordinate[head] = y_count;
 						head++;
 					}
 				}
 			}
-						
+
 			//下マス
-			if( (y_count-1) >= 0 ){		//座標が迷路内(y-1が0以上)にあり
-				if( (simple_step[x_count][y_count-1] == STEP_INIT) ){		//歩数を入れてない（入ってる歩数がSTEP_INIT）
-					if( get_wall(x_count,y_count,MUKI_DOWN)==FALSE ){		//元のマスの下壁がない
-						simple_step[x_count][y_count-1] = simple_step[x_count][y_count]+1;	//歩数を代入
-						//この座標を保持
+			if ((y_count - 1) >= 0) {		//座標が迷路内(y-1が0以上)にあり
+				if (get_wall(x_count, y_count, MUKI_DOWN) == FALSE) {		//元のマスの下壁がない
+					next_cost = now_cost + 1;
+					if (A_star) {
+						next_cost += 1;		//マンハッタン距離より重みを付けるために歩数を倍に
+						next_cost += cal_Manhattan(x_count - init_x, y_count - 1 - init_y) - cal_Manhattan(x_count - init_x, y_count - init_y);
+					}
+					if ((simple_step[x_count][y_count - 1] > next_cost)) {		//歩数を入れてない（入ってる歩数がSTEP_INIT）
+						simple_step[x_count][y_count - 1] = now_cost + 1;	//歩数を代入
+					//この座標を保持
 						x_coordinate[head] = x_count;
 						y_coordinate[head] = (y_count - 1);
 						head++;
 					}
 				}
 			}
-						
+
 			//上マス
-			if( (y_count+1) < MAZE_SIZE ){	//x,y+1の座標が迷路内(MAZE_SIZE未満)である
-				if( (simple_step[x_count][y_count+1] == STEP_INIT) ){	//歩数を入れてない（入ってる歩数がSTEP_INIT）
-					if( get_wall(x_count,y_count,MUKI_UP)==FALSE ){		//元のマスの上壁がない
-						simple_step[x_count][y_count+1] = simple_step[x_count][y_count]+1;	//歩数を代入
+			if ((y_count + 1) < MAZE_SIZE) {	//x,y+1の座標が迷路内(MAZE_SIZE未満)である
+				if (get_wall(x_count, y_count, MUKI_UP) == FALSE) {		//元のマスの上壁がない
+					next_cost = now_cost + 1;
+					if (A_star) {
+						next_cost += 1;		//マンハッタン距離より重みを付けるために歩数を倍に
+						next_cost += cal_Manhattan(x_count - init_x, y_count + 1 - init_y) - cal_Manhattan(x_count - init_x, y_count - init_y);
+					}
+					if ((simple_step[x_count][y_count + 1] > next_cost)) {	//歩数を入れてない（入ってる歩数がSTEP_INIT）
+						simple_step[x_count][y_count + 1] = now_cost + 1;	//歩数を代入
 						//この座標を保持
 						x_coordinate[head] = x_count;
 						y_coordinate[head] = (y_count + 1);
@@ -830,16 +872,19 @@ void step::set_step(unsigned char target_x,unsigned char target_y){
 					}
 				}
 			}
+
+
+		}
 		
 
-		if(head>965){		//配列越えたらエラー
+		if(head>1965){		//配列越えたらエラー
 			myprintf("エラー!\n\radachi::set_step()内\n\r");
 			break;
 		}
 	
 	}
 
-
+	g_max_queue_size_cell = MAX(head,g_max_queue_size_cell);
 }
 
 void step::set_step_by_known(unsigned char target_x,unsigned char target_y){
@@ -2410,6 +2455,8 @@ void node_search::spread_step(std::vector< std::pair<uint8_t, uint8_t> > finish,
 	
 
 	while (!que.empty()) {
+		g_max_queue_size = MAX(que.size(), g_max_queue_size);
+
 		//キューから座標を取り出す
 		temp = que.front();
 		x = temp.first;
@@ -2878,4 +2925,9 @@ node_path::node_path() {
 
 node_path::~node_path() {
 
+}
+
+
+int cal_Manhattan(int _dx, int _dy) {
+	return ABS(_dx) + ABS(_dy);
 }
