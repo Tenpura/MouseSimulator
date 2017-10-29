@@ -884,7 +884,7 @@ void step::set_step(unsigned char _tar_x,unsigned char _tar_y){
 	
 	}
 
-	g_max_queue_size_cell = MAX(head,g_max_queue_size_cell);
+	g_sum_queue_size_cell = MAX(head,g_sum_queue_size_cell);
 }
 
 void step::set_step_by_known(unsigned char target_x,unsigned char target_y){
@@ -2204,7 +2204,12 @@ uint16_t node_step::step[x_size][y_size];
 
 bool node_step::able_set_step(uint8_t x, uint8_t y, compas muki, uint16_t step_val, bool by_known) {
 	uint8_t def_muki = compas_to_define(muki);
-	
+
+	if (x > MAZE_SIZE)
+		return false;
+	if (y > MAZE_SIZE)
+		return false;
+
 	//見ていない部分には書き込めない
 	if (by_known) {
 		if (map::check_exist(x, y, def_muki) != TRUE)
@@ -2316,6 +2321,43 @@ compas node_step::get_min_compas(uint8_t x, uint8_t y) {
 	return ans;
 }
 
+compas node_step::get_max_compas(uint8_t x, uint8_t y) {
+	std::vector<compas> select;		//答えの候補
+	compas ans;
+
+
+	//n->s->e->wの順で調べる
+
+	//迷路外はとりあえず北を返す
+	if (MAX(x,y) > MAZE_SIZE)
+		return north;
+
+	//壁がないとこだけが歩数が入っている
+	if (map::get_wall(x, y, compas_to_define(north)) != TRUE)
+		select.emplace_back(north);
+	if (map::get_wall(x, y, compas_to_define(south)) != TRUE)
+		select.emplace_back(south);
+	if (map::get_wall(x, y, compas_to_define(east)) != TRUE)
+		select.emplace_back(east);
+	if (map::get_wall(x, y, compas_to_define(west)) != TRUE)
+		select.emplace_back(west);
+
+	if (select.empty())		//候補がなかった場合はとりあえずNorth
+		return north;
+
+	//要素を取り出して削除
+	ans = select.back();
+	select.pop_back();		
+
+	for (; !select.empty(); select.pop_back()) {
+		//現在の答えと、新しく取り出した候補を比較し、候補の方が良かったら更新
+		if (get_step(x, y, ans) < get_step(x, y, select.back()))
+			ans = select.back();
+		
+	}
+	return ans;
+}
+
 void node_step::reset_step(uint16_t reset_val) {
 	for (int x=0; x < x_size; x++) {
 		for (int y = 0; y < y_size; y++)
@@ -2394,6 +2436,9 @@ weight_algo node_search::get_weight_algo() {
 void node_search::spread_step(std::vector< std::pair<uint8_t, uint8_t> > finish, bool by_known) {
 	//座標管理は歩数の配列(X方向だけ倍)と異なりX,Y方向両方で倍にする　隣接座標の取り扱いが楽だから
 
+	bool debranch = true;		//現在地点までで枝切するか否か
+	uint32_t sum_queue_size = 0;
+
 	std::queue< std::pair<uint8_t, uint8_t> > que;		//座標管理用Queue　FirstがX、SecondがY
 	std::pair<uint8_t, uint8_t> temp;
 	std::queue< std::pair<int8_t, int8_t> > dir;		//方向管理用Queue　FirstがX、SecondがY
@@ -2453,9 +2498,9 @@ void node_search::spread_step(std::vector< std::pair<uint8_t, uint8_t> > finish,
 	}
 
 	
-
+	g_need_queue_size = 0;
 	while (!que.empty()) {
-		g_max_queue_size = MAX(que.size(), g_max_queue_size);
+		g_need_queue_size = MAX(que.size(), g_need_queue_size);
 
 		//キューから座標を取り出す
 		temp = que.front();
@@ -2470,71 +2515,103 @@ void node_search::spread_step(std::vector< std::pair<uint8_t, uint8_t> > finish,
 		dir.pop();	//取り出したので削除
 		dir_size = dir_x*dir_x + dir_y*dir_y;		//おおきさを2乗で計算
 
-					//斜め方向
-		for (int dx = -1; dx <= 1;dx++) {
-			for (int dy = -1; dy <= 1;dy++) {
-				if (dx == 0 && dy == 0) {
-					//自分の今いるところなので何もしない
-				}else if ((dx + dy) % 2 == 0) {			//区画の間はXY合計が奇数なので、変化幅はXY軸合計して偶数でないとダメ
-					if ((dx*dir_x + dy*dir_y) >= 0) {		//現在の方向に対して、0°、45°、90°の方向だけチェックすればよい　135°180°は負になる
-						dir_size *= (dx*dx + dy*dy);	//内積相手のサイズも考慮する　
-						step += curve_w.at((dx*dir_x + dy*dir_y)*(dx*dir_x + dy*dir_y) * 2 / dir_size);;			//カーブすることに対する重みを足す	添え字は内積の2乗 2をかけているのは分数を整数にするため
-						//その直線方向に、書き込めなくなるまで書き込んでいく	
-						for (int i = 0; ;i++) {
-							//直線が続くと足していく歩数は小さくなっていく
-							if (i < oblique_w.size())
-								oblique = oblique_w.at(i);			//要素外に出る場合は値を更新しない＝最後の値が続く
-							//歩数を書き込めたら、書き込んだ座標をQueueにぶっこむ
-							if (set_step_double(x + dx * (i + 1), y + dy * (i + 1), step + oblique, by_known)) {
-								step += oblique;		//ステップを更新
-								que.push(std::make_pair<uint8_t, uint8_t>(x + (i + 1) * dx, y + (i + 1) * dy));
-								dir.push(std::make_pair<int8_t, int8_t>(static_cast<int8_t>(dx), static_cast<int8_t>(dy)));		//方向も記録
+		sum_queue_size++;
+		
+		//ノード間のコストが非負なので、見ようとしている歩数（コスト）が現在いる場所より高いならそれより大きくしかならないので枝切り
+		//by_known=trueは最短のパス生成時なので、その時も一応枝切りしない
+		if ((!by_known && debranch) && (step > get_step(g_mouse_x, g_mouse_y, get_min_compas(g_mouse_x, g_mouse_y)))) {
+			//何もしない
+		}
+		else {
+
+			//斜め方向
+			for (int dx = -1; dx <= 1;dx++) {
+				for (int dy = -1; dy <= 1;dy++) {
+					if (dx == 0 && dy == 0) {
+						//自分の今いるところなので何もしない
+					}
+					else if ((dx + dy) % 2 == 0) {			//区画の間はXY合計が奇数なので、変化幅はXY軸合計して偶数でないとダメ
+						if ((dx*dir_x + dy*dir_y) >= 0) {		//現在の方向に対して、0°、45°、90°の方向だけチェックすればよい　135°180°は負になる
+							dir_size *= (dx*dx + dy*dy);	//内積相手のサイズも考慮する　
+							step += curve_w.at((dx*dir_x + dy*dir_y)*(dx*dir_x + dy*dir_y) * 2 / dir_size);;			//カーブすることに対する重みを足す	添え字は内積の2乗 2をかけているのは分数を整数にするため
+							//その直線方向に、書き込めなくなるまで書き込んでいく	
+							for (int i = 0; ;i++) {
+								//直線が続くと足していく歩数は小さくなっていく
+								if (i < oblique_w.size())
+									oblique = oblique_w.at(i);			//要素外に出る場合は値を更新しない＝最後の値が続く
+								//歩数を書き込めたら、書き込んだ座標をQueueにぶっこむ
+								
+								//枝切り
+								if ((!by_known && debranch) && (step > get_step(g_mouse_x, g_mouse_y, get_min_compas(g_mouse_x, g_mouse_y)))) {
+									break;
+								}
+								else if (set_step_double(x + dx * (i + 1), y + dy * (i + 1), step + oblique, by_known)) {
+									step += oblique;		//ステップを更新
+									que.push(std::make_pair<uint8_t, uint8_t>(x + (i + 1) * dx, y + (i + 1) * dy));
+									dir.push(std::make_pair<int8_t, int8_t>(static_cast<int8_t>(dx), static_cast<int8_t>(dy)));		//方向も記録
+								}
+								else
+									break;	//書き込めなくなったらループを抜ける
+
+								//直進が続くことによる増加率現象がないアルゴリズムは1回だけで抜ける
+								if (get_weight_algo() == adachi || get_weight_algo() == based_distance)
+									break;
+
 							}
-							else
-								break;	//書き込めなくなったらループを抜ける
+							dir_size /= (dx*dx + dy*dy);	//内積相手のサイズは引いておく
+
 						}
-						dir_size /= (dx*dx + dy*dy);	//内積相手のサイズは引いておく
+						step = get_step_double(x, y);		//ステップをリセット
 
 					}
-					step = get_step_double(x, y);		//ステップをリセット
-
 				}
 			}
-		}
-		//直進方向　Xが2の倍数（縦壁）のときはX方向にだけ±2がある　横壁のときはYだけに　 ※XY両方が偶数になることはないはず
-		//その直線方向に、書き込めなくなるまで書き込んでいく	
-		for (int sign = -1; sign < 2; sign += 2) {
-			int delta_x, delta_y;	//座標代入時の変数（見やすさのため）
-			int dx = (1 - x % 2) * sign;		//方向管理用
-			int dy = (1 - y % 2) * sign;		//方向管理用
+			//直進方向　Xが2の倍数（縦壁）のときはX方向にだけ±2がある　横壁のときはYだけに　 ※XY両方が偶数になることはないはず
+			//その直線方向に、書き込めなくなるまで書き込んでいく	
+			for (int sign = -1; sign < 2; sign += 2) {
+				int delta_x, delta_y;	//座標代入時の変数（見やすさのため）
+				int dx = (1 - x % 2) * sign;		//方向管理用
+				int dy = (1 - y % 2) * sign;		//方向管理用
 
-			if ((dx*dir_x + dy*dir_y) >= 0) {		//現在の方向に対して、0°、45°、90°の方向だけチェックすればよい　135°180°は負になる
-				dir_size *= (dx*dx + dy*dy);	//内積相手のサイズも考慮する　
-				step += curve_w.at((dx*dir_x + dy*dir_y)*(dx*dir_x + dy*dir_y) * 2 / dir_size);;			//カーブすることに対する重みを足す	添え字は内積の2乗 2をかけているのは分数を整数にするため
+				if ((dx*dir_x + dy*dir_y) >= 0) {		//現在の方向に対して、0°、45°、90°の方向だけチェックすればよい　135°180°は負になる
+					dir_size *= (dx*dx + dy*dy);	//内積相手のサイズも考慮する　
+					step += curve_w.at((dx*dir_x + dy*dir_y)*(dx*dir_x + dy*dir_y) * 2 / dir_size);;			//カーブすることに対する重みを足す	添え字は内積の2乗 2をかけているのは分数を整数にするため
 
-				for (int i = 0; ;i++) {
-					//直線が続くと足していく歩数は小さくなっていく
-					if (i < straight_w.size())
-						straight = straight_w.at(i);			//要素外に出る場合は値を更新しない＝最後の値が続く
+					for (int i = 0; ;i++) {
+						//直線が続くと足していく歩数は小さくなっていく
+						if (i < straight_w.size())
+							straight = straight_w.at(i);			//要素外に出る場合は値を更新しない＝最後の値が続く
 
-					delta_x = 2 * dx * (i + 1);
-					delta_y = 2 * dy * (i + 1);
-					//歩数を書き込めたら、書き込んだ座標をQueueにぶっこむ
-					if (set_step_double(x + delta_x, y + delta_y, step + straight, by_known)) {
-						step += straight;		//ステップを更新
-						que.push(std::make_pair<uint8_t, uint8_t>(x + delta_x, y + delta_y));
-						dir.push(std::make_pair<int8_t, int8_t>(static_cast<int8_t>(dx), static_cast<int8_t>(dy)));		//方向も記録
+						delta_x = 2 * dx * (i + 1);
+						delta_y = 2 * dy * (i + 1);
+						//歩数を書き込めたら、書き込んだ座標をQueueにぶっこむ
+						
+						//枝切り
+						if ((!by_known && debranch) && (step > get_step(g_mouse_x, g_mouse_y, get_min_compas(g_mouse_x, g_mouse_y)))) {
+							break;
+						}
+						else if (set_step_double(x + delta_x, y + delta_y, step + straight, by_known)) {
+							step += straight;		//ステップを更新
+							que.push(std::make_pair<uint8_t, uint8_t>(x + delta_x, y + delta_y));
+							dir.push(std::make_pair<int8_t, int8_t>(static_cast<int8_t>(dx), static_cast<int8_t>(dy)));		//方向も記録
+						}
+						else
+							break;	//書き込めなくなったらループを抜ける
+
+						//直進が続くことによる増加率現象がないアルゴリズムは1回だけで抜ける
+						if (get_weight_algo() == adachi || get_weight_algo() == based_distance)
+							break;
+
 					}
-					else
-						break;	//書き込めなくなったらループを抜ける
+					dir_size /= (dx*dx + dy*dy);	//内積相手のサイズは引いておく
+
 				}
-				dir_size /= (dx*dx + dy*dy);	//内積相手のサイズは引いておく
-
+				step = get_step_double(x, y);		//ステップをリセット
 			}
-			step = get_step_double(x, y);		//ステップをリセット
 		}
-
 	}
+
+	g_sum_queue_size_node = MAX(g_sum_queue_size_node, sum_queue_size);
 
 }
 

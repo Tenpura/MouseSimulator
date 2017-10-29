@@ -13,6 +13,7 @@
 #include"define.h"
 //#include"extern_c.h"
 #include <queue>
+#include <array>
 
 
 extern init_slalom slalom_turn_90_right;		//90°右回転スラローム
@@ -34,7 +35,7 @@ extern init_slalom slalom_turn_90_oblique_right[2];		//90°右回転大回りス
 extern init_slalom slalom_big_turn_180_left[2];	//180°左回転大回りスラローム
 extern init_slalom slalom_big_turn_180_right[2];	//180°右回転大回りスラローム
 
-extern int g_max_queue_size_cell;		//キューサイズの最大を管理（マスに歩数を置く方用）
+extern int g_sum_queue_size_cell;		//キューサイズの最大を管理（マスに歩数を置く方用）
 extern int g_mouse_x, g_mouse_y;		//マウスの座標
 
 typedef union {
@@ -288,7 +289,7 @@ public:
 
 
 typedef enum {
-	east=0, west=1, north=2, south=3 
+	east=0, west=1, north=2, south=3, num 
 } compas;
 
 class node_step :public map{
@@ -305,6 +306,7 @@ public:
 	virtual bool set_step(uint8_t x, uint8_t y, compas muki, uint16_t step_val, bool by_known);
 	uint16_t get_step(uint8_t x, uint8_t y, compas muki);
 	compas get_min_compas(uint8_t x, uint8_t y);			//（x,y）の4つの歩数の内、最小の歩数がどの方角か
+	compas get_max_compas(uint8_t x, uint8_t y);			//（x,y）の4つの歩数の内、最小の歩数がどの方角か
 
 	void reset_step(uint16_t reset_val);		//全ての歩数をreset_valでリセット
 
@@ -348,7 +350,8 @@ public:
 
 };
 
-extern int g_max_queue_size;
+extern int g_need_queue_size;
+extern uint32_t g_sum_queue_size_node;
 
 typedef enum {
 	adachi, based_distance, priority_straight,T_Wataru_method
